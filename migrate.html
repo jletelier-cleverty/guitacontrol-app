@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>GuitaControl - Migrar datos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body { font-family: system-ui; max-width: 600px; margin: 60px auto; padding: 20px; background: #0f172a; color: #e2e8f0; }
+h1 { color: #38bdf8; }
+button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 10px 0; }
+button:hover { background: #1d4ed8; }
+#log { background: #1e293b; padding: 16px; border-radius: 8px; margin-top: 20px; white-space: pre-wrap; font-family: monospace; font-size: 13px; min-height: 100px; }
+.success { color: #4ade80; }
+.error { color: #f87171; }
+input { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; width: 100%; margin: 6px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Migrar datos a GuitaControl</h1>
+<p>Esta página lee tus datos de localStorage y los sube a Supabase.</p>
+
+<p><strong>Primero, inicia sesión:</strong></p>
+<input type="email" id="email" placeholder="Tu email">
+<input type="password" id="password" placeholder="Tu contraseña">
+<button onclick="login()">Iniciar sesión</button>
+<button onclick="signup()">O crear cuenta nueva</button>
+
+<br><br>
+<button onclick="migrate()" id="migrateBtn" disabled>Migrar datos</button>
+
+<div id="log">Esperando login...</div>
+
+<script>
+var SUPABASE_URL = 'https://ukerhdozhogjbwfhlkqu.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_9Gjx6QxkKpsOyZuQ1OWGHA__Z7dVqtM';
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var logEl = document.getElementById('log');
+var currentUser = null;
+
+function log(msg, cls) {
+  logEl.innerHTML += '<span class="' + (cls||'') + '">' + msg + '</span>\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function login() {
+  logEl.innerHTML = '';
+  var email = document.getElementById('email').value;
+  var pass = document.getElementById('password').value;
+  log('Iniciando sesión...');
+  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pass });
+  if (error) { log('Error: ' + error.message, 'error'); return; }
+  currentUser = data.user;
+  log('Login exitoso: ' + currentUser.email, 'success');
+  document.getElementById('migrateBtn').disabled = false;
+}
+
+async function signup() {
+  logEl.innerHTML = '';
+  var email = document.getElementById('email').value;
+  var pass = document.getElementById('password').value;
+  if (!email || !pass) { log('Ingresa email y contraseña', 'error'); return; }
+  log('Creando cuenta...');
+  var { data, error } = await sb.auth.signUp({ email: email, password: pass });
+  if (error) { log('Error: ' + error.message, 'error'); return; }
+  currentUser = data.user;
+  log('Cuenta creada: ' + currentUser.email, 'success');
+  document.getElementById('migrateBtn').disabled = false;
+}
+
+async function migrate() {
+  if (!currentUser) { log('Primero inicia sesión', 'error'); return; }
+  logEl.innerHTML = '';
+
+  // Read localStorage
+  var txRaw = localStorage.getItem('finanzas_data');
+  var rulesRaw = localStorage.getItem('finanzas_rules_v3');
+  var profileRaw = localStorage.getItem('finanzas_profile');
+  var propsRaw = localStorage.getItem('finanzas_properties');
+  var goalsRaw = localStorage.getItem('finanzas_goals');
+
+  var transactions = JSON.parse(txRaw || '[]');
+  var rules = JSON.parse(rulesRaw || '[]');
+  var profile = JSON.parse(profileRaw || '{}');
+  var properties = JSON.parse(propsRaw || '[]');
+  var goals = JSON.parse(goalsRaw || '[]');
+
+  log('Encontradas ' + transactions.length + ' transacciones');
+  log('Encontradas ' + rules.length + ' reglas');
+  log('Encontradas ' + properties.length + ' propiedades');
+
+  // Upload profile
+  if (profile && Object.keys(profile).length > 0) {
+    log('Subiendo perfil...');
+    var { error } = await sb.from('profiles').upsert({
+      id: currentUser.id,
+      age: profile.age || 30,
+      retire_age: profile.retireAge || 65,
+      monthly_spend: profile.monthlySpend || 1500000,
+      savings_goal: profile.savingsGoal || 500000,
+      return_rate: profile.returnRate || 8,
+      uf: profile.uf || 38800
+    }, { onConflict: 'id' });
+    if (error) log('Error perfil: ' + error.message, 'error');
+    else log('Perfil migrado', 'success');
+  }
+
+  // Upload transactions in batches
+  if (transactions.length > 0) {
+    log('Subiendo transacciones...');
+    var rows = transactions.map(function(tx) {
+      return {
+        id: tx.id, user_id: currentUser.id, date: tx.date,
+        description: tx.description, amount: tx.amount, type: tx.type,
+        source: tx.source, category: tx.category || '', month: tx.month
+      };
+    });
+    for (var i = 0; i < rows.length; i += 100) {
+      var batch = rows.slice(i, i + 100);
+      var { error } = await sb.from('transactions').upsert(batch, { onConflict: 'id' });
+      if (error) log('Error transacciones batch ' + i + ': ' + error.message, 'error');
+      else log('Batch ' + (i/100+1) + ' subido (' + batch.length + ' transacciones)', 'success');
+    }
+  }
+
+  // Upload rules
+  if (rules.length > 0) {
+    log('Subiendo reglas...');
+    await sb.from('rules').delete().eq('user_id', currentUser.id);
+    var ruleRows = rules.map(function(r) {
+      return { user_id: currentUser.id, keyword: r.keyword, category: r.category };
+    });
+    for (var i = 0; i < ruleRows.length; i += 100) {
+      var batch = ruleRows.slice(i, i + 100);
+      var { error } = await sb.from('rules').insert(batch);
+      if (error) log('Error reglas: ' + error.message, 'error');
+      else log(batch.length + ' reglas subidas', 'success');
+    }
+  }
+
+  // Upload properties
+  if (properties.length > 0) {
+    log('Subiendo propiedades...');
+    for (var i = 0; i < properties.length; i++) {
+      var p = properties[i];
+      var { error } = await sb.from('properties').upsert({
+        id: p.id, user_id: currentUser.id, name: p.name, type: p.type,
+        purchase_value: p.purchaseValue, current_value: p.currentValue,
+        debt: p.debt, dividendo: p.dividendo, years_left: p.yearsLeft,
+        appreciation: p.appreciation, rent: p.rent
+      }, { onConflict: 'id' });
+      if (error) log('Error propiedad: ' + error.message, 'error');
+      else log('Propiedad "' + p.name + '" migrada', 'success');
+    }
+  }
+
+  // Upload goals
+  if (goals && goals.length > 0) {
+    log('Subiendo metas...');
+    for (var i = 0; i < goals.length; i++) {
+      var g = goals[i];
+      if (g && (g.title || g.value)) {
+        var { error } = await sb.from('goals').upsert({
+          user_id: currentUser.id, slot: i,
+          title: g.title || '', value: g.value || 0,
+          image_url: g.image || ''
+        }, { onConflict: 'user_id,slot' });
+        if (error) log('Error meta ' + i + ': ' + error.message, 'error');
+        else log('Meta "' + (g.title||i) + '" migrada', 'success');
+      }
+    }
+  }
+
+  log('\n¡MIGRACIÓN COMPLETA! Ahora ve a https://project-qzf52.vercel.app', 'success');
+}
+</script>
+</body>
+</html>

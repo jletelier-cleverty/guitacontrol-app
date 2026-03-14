@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Finanzas Personales</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="mobile-header" id="mobileHeader">
+      <button class="mobile-menu-btn" id="mobileMenuBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="mobile-logo">💰 Guita Control</span>
+    </div>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">💰 Finanzas</div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="#" class="nav-item" data-view="metas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Metas
+        </a>
+        <a href="#" class="nav-item" data-view="patrimonio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Patrimonio
+        </a>
+        <a href="#" class="nav-item" data-view="transacciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          Transacciones
+        </a>
+        <a href="#" class="nav-item" data-view="revisar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Revisar
+        </a>
+        <a href="#" class="nav-item" data-view="categorias">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          Reglas
+        </a>
+        <a href="#" class="nav-item" data-view="importar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Importar
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div>
+          <h1 id="viewTitle">Dashboard</h1>
+          <p class="header-sub" id="viewSubtitle">Resumen de tus finanzas</p>
+        </div>
+        <div class="header-actions">
+          <select id="monthFilter" class="select-month"></select>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <div id="view-dashboard" class="view active">
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-green">
+            <div class="kpi-icon">📈</div>
+            <div><span class="kpi-label">Ingresos</span><span class="kpi-value green" id="kpiIngresos">$0</span></div>
+          </div>
+          <div class="kpi-card kpi-red">
+            <div class="kpi-icon">📉</div>
+            <div><span class="kpi-label">Gastos</span><span class="kpi-value red" id="kpiGastos">$0</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">⚖️</div>
+            <div><span class="kpi-label">Balance</span><span class="kpi-value" id="kpiBalance">$0</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">📊</div>
+            <div><span class="kpi-label">Gasto Diario Prom.</span><span class="kpi-value" id="kpiPromedio">$0</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">❓</div>
+            <div><span class="kpi-label">Sin Categorizar</span><span class="kpi-value" id="kpiSinCat">0</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">🔢</div>
+            <div><span class="kpi-label">Transacciones</span><span class="kpi-value" id="kpiTxCount">0</span></div>
+          </div>
+        </div>
+
+        <div class="debug-panel" id="debugPanel" style="display:none">
+          <div class="debug-toggle" onclick="document.getElementById('debugDetail').classList.toggle('open')">
+            <span>🔍 Desglose de numeros</span>
+            <span class="review-group-arrow">▾</span>
+          </div>
+          <div id="debugDetail" class="debug-detail"></div>
+        </div>
+
+        <div class="dashboard-section">
+          <h3>Gastos por Categoria <span class="section-hint" id="catFilterHint"></span></h3>
+          <div class="cat-breakdown" id="catBreakdown"></div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Distribucion</h3>
+            <div class="chart-donut-wrap">
+              <canvas id="chartCategorias"></canvas>
+              <div class="chart-center" id="chartCenter"></div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Ingresos vs Gastos por Mes</h3>
+            <canvas id="chartMensual"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card full-width">
+          <h3>Mayores Gastos del Periodo</h3>
+          <div id="topGastos" class="top-gastos"></div>
+        </div>
+
+        <div id="loansSection"></div>
+      </div>
+
+      <!-- TRANSACCIONES -->
+      <div id="view-transacciones" class="view">
+        <div class="filters-bar">
+          <input type="text" id="searchTx" placeholder="Buscar..." class="search-input">
+          <select id="filterSource" class="filter-select">
+            <option value="all">Todas las fuentes</option>
+            <option value="banco">Banco BICE</option>
+            <option value="tc">TC CMR</option>
+          </select>
+          <select id="filterType" class="filter-select">
+            <option value="all">Todos</option>
+            <option value="gasto">Gastos</option>
+            <option value="ingreso">Ingresos</option>
+          </select>
+          <select id="filterCat" class="filter-select">
+            <option value="all">Todas las categorias</option>
+            <option value="uncategorized">Sin categorizar</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table id="txTable">
+            <thead><tr><th>Fecha</th><th>Descripcion</th><th>Fuente</th><th>Monto</th><th>Categoria</th></tr></thead>
+            <tbody id="txBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REVISAR -->
+      <div id="view-revisar" class="view">
+        <div class="revisar-header">
+          <p>Revisa las transacciones agrupadas por categoria. Haz clic en <strong>Editar</strong> para corregir cualquier categoria mal asignada.</p>
+        </div>
+        <div id="revisarList"></div>
+      </div>
+
+      <!-- CATEGORIAS / REGLAS -->
+      <div id="view-categorias" class="view">
+        <div class="cat-header">
+          <h3>Reglas de Categorizacion</h3>
+          <p>Palabras clave que asignan categoria automaticamente.</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="addRuleBtn">+ Nueva Regla</button>
+            <button class="btn btn-primary" id="addCatBtn" style="background:#10b981">+ Nueva Categoria</button>
+            <button class="btn btn-secondary" id="resetRulesBtn">Resetear reglas</button>
+          </div>
+        </div>
+        <div class="rules-list" id="rulesList"></div>
+        <div class="cat-header" style="margin-top:40px">
+          <h3>Sin Categorizar</h3>
+        </div>
+        <div id="uncategorized"></div>
+      </div>
+
+      <!-- METAS -->
+      <div id="view-metas" class="view">
+        <div class="metas-header">
+          <p>Define tus objetivos financieros y trackea tu avance real.</p>
+        </div>
+
+        <!-- Resumen de metas -->
+        <div class="goals-summary" id="goalsSummary"></div>
+
+        <!-- Filtros por plazo -->
+        <div class="goals-tabs">
+          <button class="goals-tab active" data-filter="all" onclick="filterGoals('all')">Todas</button>
+          <button class="goals-tab" data-filter="corto" onclick="filterGoals('corto')">Corto plazo</button>
+          <button class="goals-tab" data-filter="mediano" onclick="filterGoals('mediano')">Mediano plazo</button>
+          <button class="goals-tab" data-filter="largo" onclick="filterGoals('largo')">Largo plazo</button>
+        </div>
+
+        <!-- Lista de metas -->
+        <div id="goalsList"></div>
+        <div id="goalsEmpty" class="empty-state">Sin metas definidas. Agrega tu primera meta financiera.</div>
+
+        <!-- Boton agregar -->
+        <button class="btn btn-primary goals-add-btn" id="addGoalBtn">+ Nueva Meta</button>
+
+        <!-- Frase motivacional -->
+        <div class="metas-quote" id="metasQuote"></div>
+
+        <!-- Modal de meta -->
+        <div class="modal-overlay" id="goalModal">
+          <div class="modal-card">
+            <h3 id="goalModalTitle">Nueva Meta</h3>
+            <div style="display:flex;flex-direction:column;gap:12px;padding:0 4px;">
+              <label>Categoria</label>
+              <select id="goalCategory" class="filter-select full-w" onchange="updateGoalForm()">
+                <option value="emergencia">🛡️ Fondo de emergencia</option>
+                <option value="viaje">✈️ Viaje</option>
+                <option value="auto">🚗 Auto</option>
+                <option value="casa">🏠 Pie de casa / propiedad</option>
+                <option value="educacion">🎓 Educacion</option>
+                <option value="negocio">💼 Negocio / emprendimiento</option>
+                <option value="retiro">🏖️ Retiro / libertad financiera</option>
+                <option value="otro">📌 Otro</option>
+              </select>
+              <div id="goalCategoryHint" style="font-size:0.78rem;color:var(--text-secondary);padding:6px 12px;background:var(--bg);border-radius:8px;"></div>
+
+              <label>Nombre de la meta</label>
+              <input type="text" id="goalName" placeholder="ej: Fondo de emergencia 6 meses" class="search-input full-w">
+
+              <label>Monto objetivo (CLP)</label>
+              <input type="number" id="goalTarget" placeholder="ej: 5000000" class="search-input full-w">
+
+              <label>Plazo</label>
+              <select id="goalTerm" class="filter-select full-w">
+                <option value="corto">Corto plazo (menos de 1 año)</option>
+                <option value="mediano">Mediano plazo (1 a 5 años)</option>
+                <option value="largo">Largo plazo (mas de 5 años)</option>
+              </select>
+
+              <label>Fecha objetivo (opcional)</label>
+              <input type="date" id="goalDate" class="search-input full-w">
+
+              <label>Ahorro mensual asignado (CLP)</label>
+              <input type="number" id="goalMonthly" placeholder="ej: 200000" class="search-input full-w">
+
+              <div id="goalDynamicFields"></div>
+
+              <label>Prioridad</label>
+              <select id="goalPriority" class="filter-select full-w">
+                <option value="alta">🔴 Alta — lo necesito si o si</option>
+                <option value="media">🟡 Media — importante pero flexible</option>
+                <option value="baja">🟢 Baja — seria bonito lograrlo</option>
+              </select>
+
+              <label>Notas (opcional)</label>
+              <input type="text" id="goalNotes" placeholder="ej: Para el viaje a Europa en verano" class="search-input full-w">
+            </div>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" id="goalModalCancel">Cancelar</button>
+              <button class="btn btn-danger" id="goalModalDelete" style="display:none">Eliminar</button>
+              <button class="btn btn-primary" id="goalModalSave">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATRIMONIO -->
+      <div id="view-patrimonio" class="view">
+        <!-- PERFIL FINANCIERO -->
+        <div class="patrimonio-grid-top">
+          <div class="import-card">
+            <h3>👤 Perfil Financiero</h3>
+            <div class="profile-form">
+              <div class="profile-row">
+                <label>Valor UF actual <span class="help-tip" data-tip="Valor de la Unidad de Fomento en pesos chilenos. Actualiza este valor periodicamente para mantener los calculos correctos.">?</span></label>
+                <input type="number" id="profileUF" value="38800" class="search-input" style="width:120px">
+              </div>
+              <div class="profile-row">
+                <label>Edad actual <span class="help-tip" data-tip="Tu edad hoy. Se usa para calcular cuantos años faltan para tu jubilacion y proyectar el crecimiento de tu patrimonio.">?</span></label>
+                <input type="number" id="profileAge" min="18" max="90" value="30" class="search-input" style="width:80px">
+              </div>
+              <div class="profile-row">
+                <label>Edad de jubilacion <span class="help-tip" data-tip="La edad a la que quieres dejar de trabajar. Define el horizonte de la proyeccion de patrimonio.">?</span></label>
+                <input type="number" id="profileRetireAge" min="30" max="90" value="65" class="search-input" style="width:80px">
+              </div>
+              <div class="profile-row">
+                <label>Gasto mensual al jubilarme <span class="help-tip" data-tip="Cuanto quieres gastar por mes cuando ya no trabajes. Se usa para calcular tu Numero FIRE: el monto total que necesitas acumulado para vivir de tus inversiones (regla del 4% anual).">?</span></label>
+                <input type="number" id="profileMonthlySpend" value="1500000" class="search-input" style="width:140px">
+              </div>
+              <div class="profile-row">
+                <label>Meta ahorro mensual <span class="help-tip" data-tip="Cuanto quieres ahorrar o invertir cada mes. Se compara con lo que realmente ahorras (transacciones categorizadas como Ahorro) para medir tu cumplimiento.">?</span></label>
+                <input type="number" id="profileSavingsGoal" value="500000" class="search-input" style="width:140px">
+              </div>
+              <div class="profile-row">
+                <label>Rentabilidad anual esperada (%) <span class="help-tip" data-tip="Retorno anual que esperas de tus ahorros e inversiones financieras. Ej: 8% es un promedio historico moderado para fondos diversificados.">?</span></label>
+                <input type="number" id="profileReturnRate" min="0" max="30" step="0.5" value="8" class="search-input" style="width:80px">
+              </div>
+              <button class="btn btn-primary" id="saveProfileBtn" style="margin-top:12px">Guardar Perfil</button>
+            </div>
+          </div>
+
+          <div class="import-card">
+            <h3>💰 Resumen Patrimonio</h3>
+            <div class="patrimonio-summary" id="patrimonioSummary">
+              <div class="pat-kpi">
+                <span class="pat-kpi-label">Patrimonio Neto <span class="help-tip" data-tip="Propiedades (neto deuda) + liquidez (cuentas, depósitos, fondos) + ahorros de cartolas. Todo en CLP.">?</span></span>
+                <span class="pat-kpi-value big" id="patNetoTotal">$0</span>
+              </div>
+              <div class="pat-kpi-row">
+                <div class="pat-kpi">
+                  <span class="pat-kpi-label">Propiedades <span class="help-tip" data-tip="Valor total de tus propiedades e inversiones en UF, convertido a CLP con la UF del perfil.">?</span></span>
+                  <span class="pat-kpi-value" id="patPropTotal">$0</span>
+                  <span class="pat-kpi-sub" id="patPropUF"></span>
+                </div>
+                <div class="pat-kpi">
+                  <span class="pat-kpi-label">Liquidez y Ahorros <span class="help-tip" data-tip="Suma de tus cuentas de liquidez (cuenta corriente, depósitos, fondos, etc.) más transacciones categorizadas como Ahorro.">?</span></span>
+                  <span class="pat-kpi-value" id="patAhorroTotal">$0</span>
+                </div>
+              </div>
+              <div class="pat-kpi-row">
+                <div class="pat-kpi">
+                  <span class="pat-kpi-label">Numero FIRE <span class="help-tip" data-tip="El monto que necesitas acumulado para vivir de tus inversiones sin trabajar. Formula: (gasto mensual x 12) / 4%. Si tienes esto invertido, puedes retirar un 4% anual y nunca se acaba.">?</span></span>
+                  <span class="pat-kpi-value" id="patFire">$0</span>
+                </div>
+                <div class="pat-kpi">
+                  <span class="pat-kpi-label">Progreso FIRE <span class="help-tip" data-tip="Que porcentaje de tu Numero FIRE ya tienes acumulado.">?</span></span>
+                  <span class="pat-kpi-value" id="patFirePct">0%</span>
+                </div>
+              </div>
+              <div class="fire-bar-wrap">
+                <div class="fire-bar"><div class="fire-bar-fill" id="fireBarFill"></div></div>
+                <div class="fire-bar-labels">
+                  <span>Hoy</span>
+                  <span id="fireYearsLabel">-- años</span>
+                  <span>FIRE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- META DE AHORRO -->
+        <div class="import-card" style="margin-top:20px">
+          <h3>🎯 Meta de Ahorro Mensual</h3>
+          <div class="savings-track" id="savingsTrack"></div>
+        </div>
+
+        <!-- PROPIEDADES -->
+        <div class="import-card" style="margin-top:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h3>🏠 Propiedades e Inversiones</h3>
+            <button class="btn btn-primary" id="addPropertyBtn">+ Agregar</button>
+          </div>
+          <div id="propertiesList"></div>
+          <div id="propertiesEmpty" class="empty-state">Sin propiedades. Agrega tu primera propiedad o inversion.</div>
+        </div>
+
+        <!-- LIQUIDEZ Y AHORROS -->
+        <div class="import-card" style="margin-top:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h3>💵 Liquidez y Ahorros</h3>
+            <button class="btn btn-primary" id="addAccountBtn">+ Agregar</button>
+          </div>
+          <div id="accountsList"></div>
+          <div id="accountsEmpty" class="empty-state">Sin cuentas registradas. Agrega tu cuenta corriente, depósitos a plazo, fondos mutuos, APV, etc.</div>
+          <div id="accountsTotalBar" style="display:none;margin-top:14px;padding:14px 16px;background:var(--green-bg);border-radius:var(--radius-sm);border:1px solid #d1fae5;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.82rem;font-weight:600;color:var(--green);">Total Liquidez</span>
+              <span style="font-size:1.05rem;font-weight:700;color:var(--green);" id="accountsTotalValue">$0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROYECCION JUBILACION -->
+        <div class="import-card" style="margin-top:20px">
+          <h3>📈 Proyección hacia Jubilación</h3>
+          <p style="color:var(--text-secondary);font-size:0.83rem;margin-bottom:16px">Crecimiento estimado de tu patrimonio considerando ahorro mensual, rentabilidad y plusvalia de propiedades.</p>
+          <div style="position:relative;width:100%;"><canvas id="chartProjection"></canvas></div>
+          <div class="projection-insights" id="projectionInsights"></div>
+        </div>
+
+        <!-- COMO FUNCIONA -->
+        <div class="import-card how-it-works" style="margin-top:20px">
+          <h3>Como funciona esta proyeccion</h3>
+          <div class="how-grid">
+            <div class="how-item">
+              <span class="how-icon">💰</span>
+              <div>
+                <strong>Ahorro mensual = inversion</strong>
+                <p>Tu meta de ahorro se asume invertida mes a mes con interes compuesto a la rentabilidad que definiste. No es plata bajo el colchon — es como si metieras esa plata a un fondo mutuo, ETF o APV cada mes.</p>
+              </div>
+            </div>
+            <div class="how-item">
+              <span class="how-icon">🏠</span>
+              <div>
+                <strong>Propiedades = valor - deuda</strong>
+                <p>El patrimonio en propiedades es el valor de mercado menos lo que debes. La deuda baja linealmente segun el plazo que indicaste. El valor sube con la plusvalia anual que estimaste.</p>
+              </div>
+            </div>
+            <div class="how-item">
+              <span class="how-icon">🔓</span>
+              <div>
+                <strong>Dividendos se liberan</strong>
+                <p>Cuando terminas de pagar una propiedad, el dividendo que pagabas se suma como ahorro extra. Esa plata tambien se invierte y crece con interes compuesto.</p>
+              </div>
+            </div>
+            <div class="how-item">
+              <span class="how-icon">🏁</span>
+              <div>
+                <strong>Numero FIRE (regla del 4%)</strong>
+                <p>Es el monto total que necesitas para vivir de tus inversiones. Se calcula como tu gasto mensual deseado x 12 / 0.04. Si tienes ese monto invertido, puedes retirar un 4% al año y estadisticamente nunca se acaba (basado en el estudio Trinity).</p>
+              </div>
+            </div>
+            <div class="how-item">
+              <span class="how-icon">📈</span>
+              <div>
+                <strong>Rentabilidad compuesta</strong>
+                <p>La magia del interes compuesto: tus ganancias generan mas ganancias. Un 8% anual no es lineal — al principio crece lento, pero se acelera con los años. Por eso la curva se empina al final.</p>
+              </div>
+            </div>
+            <div class="how-item">
+              <span class="how-icon">🏘️</span>
+              <div>
+                <strong>Arriendos</strong>
+                <p>Si alguna propiedad genera arriendo, ese ingreso se suma mensualmente a tu ahorro/inversion y tambien crece con interes compuesto.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPORTAR -->
+      <div id="view-importar" class="view">
+        <div class="import-card">
+          <h3>📂 Importar Cartola</h3>
+          <p>Sube archivos Excel (.xlsx) o PDF de cualquier banco o tarjeta. Se detecta el formato automaticamente y los duplicados se ignoran.</p>
+          <label class="upload-area" id="dropImport">
+            <input type="file" id="fileImport" accept=".xlsx,.xls,.pdf" multiple hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Arrastra o haz clic</span><small>.xlsx / .pdf — uno o varios archivos</small>
+          </label>
+          <div id="importStatus" class="import-status"></div>
+        </div>
+        <div class="import-card" style="margin-top:24px">
+          <h3>Datos</h3>
+          <div class="import-actions">
+            <button class="btn btn-secondary" id="dedupBtn">Limpiar duplicados</button>
+            <button class="btn btn-secondary" id="exportBtn">Exportar CSV</button>
+            <button class="btn btn-danger" id="clearBtn">Borrar todo</button>
+          </div>
+          <div id="storageInfo" class="import-status"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="catModal">
+    <div class="modal">
+      <h3 id="catModalTitle">Asignar Categoria</h3>
+      <div class="modal-body">
+        <label>Categoria</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="catSearchInput" placeholder="Buscar o crear categoria..." class="search-input full-w" autocomplete="off">
+          <div class="autocomplete-list" id="catSearchList"></div>
+        </div>
+        <label style="margin-top:12px">Mes asignado <span class="help-tip" data-tip="Si la transaccion cayo en un mes pero corresponde a otro (ej: sueldo de marzo depositado el 28 de febrero), cambialo aqui.">?</span></label>
+        <select id="catMonthSelect" class="filter-select full-w"></select>
+        <div id="catModalInfo" class="modal-info"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="catModalCancel">Cancelar</button>
+        <button class="btn btn-primary" id="catModalSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="ruleModal">
+    <div class="modal">
+      <h3>Nueva Regla</h3>
+      <div class="modal-body">
+        <label>Palabra clave</label>
+        <input type="text" id="ruleKeyword" placeholder="ej: copec, uber..." class="search-input full-w">
+        <label style="margin-top:12px">Categoria</label>
+        <select id="ruleCatSelect" class="filter-select full-w"></select>
+        <label style="margin-top:12px">O crear nueva</label>
+        <input type="text" id="ruleNewCat" placeholder="Nueva categoria..." class="search-input full-w">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="ruleModalCancel">Cancelar</button>
+        <button class="btn btn-primary" id="ruleModalSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="catCreateModal">
+    <div class="modal">
+      <h3>Nueva Categoria</h3>
+      <div class="modal-body">
+        <label>Nombre</label>
+        <input type="text" id="catCreateName" placeholder="ej: Viajes, Gimnasio..." class="search-input full-w">
+        <label style="margin-top:12px">Icono (emoji)</label>
+        <input type="text" id="catCreateIcon" placeholder="ej: ✈️" class="search-input full-w" style="max-width:80px;font-size:1.3rem;text-align:center">
+        <label style="margin-top:12px">Color</label>
+        <input type="color" id="catCreateColor" value="#6366f1" style="width:60px;height:36px;border:none;cursor:pointer;border-radius:8px">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="catCreateCancel">Cancelar</button>
+        <button class="btn btn-primary" id="catCreateSave">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPERTY MODAL -->
+  <div class="modal-overlay" id="propertyModal">
+    <div class="modal">
+      <h3 id="propertyModalTitle">Agregar Propiedad</h3>
+      <div class="modal-body">
+        <label>¿Qué tipo de propiedad es?</label>
+        <select id="propType" class="filter-select full-w" onchange="updatePropertyForm()">
+          <option value="propiedad">🏠 Casa / Departamento</option>
+          <option value="terreno">🏞️ Terreno</option>
+          <option value="comercial">🏢 Local Comercial / Oficina</option>
+          <option value="estacionamiento">🅿️ Estacionamiento / Bodega</option>
+        </select>
+        <div id="propTypeHint" style="font-size:0.78rem;color:var(--text-secondary);margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;"></div>
+        <div id="propDynamicFields" style="margin-top:14px;display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="propModalCancel">Cancelar</button>
+        <button class="btn btn-danger" id="propModalDelete" style="display:none">Eliminar</button>
+        <button class="btn btn-primary" id="propModalSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CUENTA LIQUIDEZ -->
+  <div class="modal-overlay" id="accountModal">
+    <div class="modal">
+      <h3 id="accountModalTitle">Agregar Cuenta</h3>
+      <div class="modal-body">
+        <label>¿Qué tipo de ahorro o inversión es?</label>
+        <select id="accType" class="filter-select full-w" onchange="updateAccountForm()">
+          <option value="cuenta_corriente">💳 Cuenta Corriente</option>
+          <option value="cuenta_ahorro">🏦 Cuenta de Ahorro</option>
+          <option value="deposito_plazo">🔒 Depósito a Plazo</option>
+          <option value="fondo_mutuo">📈 Fondo Mutuo</option>
+          <option value="apv">🎯 APV (Ahorro Previsional)</option>
+          <option value="etf">📊 ETF / Acciones</option>
+          <option value="cripto">₿ Criptomonedas</option>
+          <option value="efectivo">💵 Efectivo / Caja</option>
+          <option value="otro">📁 Otra inversión</option>
+        </select>
+        <div id="accTypeHint" style="font-size:0.78rem;color:var(--text-secondary);margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;"></div>
+
+        <!-- Campos dinámicos -->
+        <div id="accDynamicFields" style="margin-top:14px;display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="accModalCancel">Cancelar</button>
+        <button class="btn btn-danger" id="accModalDelete" style="display:none">Eliminar</button>
+        <button class="btn btn-primary" id="accModalSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
