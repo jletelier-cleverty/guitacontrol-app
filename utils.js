@@ -5,8 +5,8 @@
 function getCountryCfg() { return COUNTRY_CONFIG[profile.country] || COUNTRY_CONFIG['CL']; }
 function getUnitName() { return getCountryCfg().unitName; }
 
-function fmt(n) { var c = getCountryCfg(); return c.symbol + n.toLocaleString(c.locale); }
-function fmtUF(n) { var u = getUnitName(); return u ? (u + ' ' + n.toLocaleString(getCountryCfg().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : fmt(n); }
+function fmt(n) { n = n || 0; var c = getCountryCfg(); return c.symbol + n.toLocaleString(c.locale); }
+function fmtUF(n) { n = n || 0; var u = getUnitName(); return u ? (u + ' ' + n.toLocaleString(getCountryCfg().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : fmt(n); }
 function ufToCLP(uf) { return Math.round(uf * (profile.uf || 1)); }
 function clpToUF(clp) { return clp / (profile.uf || 1); }
 
