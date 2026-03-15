@@ -79,7 +79,8 @@ document.getElementById('saveAjustesBtn').addEventListener('click', async functi
 });
 
 // ---- SIMULADOR ¿ME ALCANZA? ----
-document.getElementById('simCalcular').addEventListener('click', function() {
+var _simBtn = document.getElementById('simCalcular');
+if (_simBtn) _simBtn.addEventListener('click', function() {
   var valor = parseFloat(document.getElementById('simValor').value) || 0;
   var nombre = document.getElementById('simNombre').value || document.getElementById('simTipo').value;
   var pago = document.querySelector('input[name="simPago"]:checked').value;
