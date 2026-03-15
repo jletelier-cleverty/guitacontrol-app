@@ -15,7 +15,7 @@ if (!window.DEMO_MODE) {
     function rnd(a, b) { return Math.round(a + Math.random() * (b - a)); }
 
     var tx = [];
-    var meses = ['2026-01', '2026-02', '2026-03'];
+    var meses = ['2025-04', '2025-05', '2025-06', '2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
 
     var rec = [
       { d: 'Sueldo Empresa Comercial Ltda', a: 2500000, t: 'ingreso', c: 'Sueldo', dy: 1 },
@@ -87,6 +87,27 @@ if (!window.DEMO_MODE) {
       if (mm === 3) {
         tx.push({ id: did(), date: mes + '-18', description: 'Easy.cl herramientas', amount: 45000, type: 'gasto', source: 'banco', category: 'Compras Online', month: mes });
       }
+      if (mm === 5) {
+        tx.push({ id: did(), date: mes + '-10', description: 'Dia de la madre regalo', amount: 65000, type: 'gasto', source: 'banco', category: 'Otros', month: mes });
+      }
+      if (mm === 6) {
+        tx.push({ id: did(), date: mes + '-21', description: 'Aguinaldo Fiestas Patrias', amount: 180000, type: 'ingreso', source: 'banco', category: 'Sueldo', month: mes });
+      }
+      if (mm === 7) {
+        tx.push({ id: did(), date: mes + '-12', description: 'Vacaciones sur de Chile', amount: 320000, type: 'gasto', source: 'banco', category: 'Entretenimiento', month: mes });
+      }
+      if (mm === 9) {
+        tx.push({ id: did(), date: mes + '-18', description: 'Fiestas Patrias asado', amount: 95000, type: 'gasto', source: 'banco', category: 'Restaurantes / Comida', month: mes });
+        tx.push({ id: did(), date: mes + '-19', description: 'Fonda entrada + consumo', amount: 45000, type: 'gasto', source: 'banco', category: 'Entretenimiento', month: mes });
+      }
+      if (mm === 11) {
+        tx.push({ id: did(), date: mes + '-25', description: 'Black Friday Falabella.com', amount: 189000, type: 'gasto', source: 'banco', category: 'Compras Online', month: mes });
+      }
+      if (mm === 12) {
+        tx.push({ id: did(), date: mes + '-15', description: 'Aguinaldo Navidad', amount: 250000, type: 'ingreso', source: 'banco', category: 'Sueldo', month: mes });
+        tx.push({ id: did(), date: mes + '-23', description: 'Regalos Navidad', amount: 210000, type: 'gasto', source: 'banco', category: 'Otros', month: mes });
+        tx.push({ id: did(), date: mes + '-31', description: 'Cena Año Nuevo restaurante', amount: 85000, type: 'gasto', source: 'banco', category: 'Restaurantes / Comida', month: mes });
+      }
     });
 
     tx.sort(function(a, b) { return b.date.localeCompare(a.date); });
@@ -149,7 +170,7 @@ if (!window.DEMO_MODE) {
     // Banner
     var b = document.createElement('div');
     b.id = 'demoBanner';
-    b.innerHTML = '<span>Estás viendo la demo con datos de ejemplo</span> <a href="login.html">Crear cuenta gratis →</a>';
+    b.innerHTML = '<span>Estás viendo la demo — Importa tu cartola en minutos y reconocemos el 85% de tus gastos automáticamente</span> <a href="login.html">Crear cuenta gratis →</a>';
     document.body.prepend(b);
     document.body.classList.add('demo-mode');
 
