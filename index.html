@@ -3,10 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Finanzas Personales</title>
+  <title>GuitaControl - Finanzas Personales</title>
+  <meta name="description" content="Controla tus finanzas personales. Importa cartolas, analiza gastos, proyecta tu patrimonio.">
+  <meta property="og:title" content="GuitaControl - Finanzas Personales">
+  <meta property="og:description" content="Controla tus gastos, ahorra e invierte con inteligencia.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -17,11 +24,11 @@
       <button class="mobile-menu-btn" id="mobileMenuBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
-      <span class="mobile-logo">💰 Guita Control</span>
+      <img src="logo-dark.png" alt="GuitaControl" class="mobile-logo-img">
     </div>
     <div class="mobile-overlay" id="mobileOverlay"></div>
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-logo">💰 Finanzas</div>
+      <div class="sidebar-logo"><img src="logo-dark.png" alt="GuitaControl"></div>
       <nav class="sidebar-nav">
         <a href="#" class="nav-item active" data-view="dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -51,6 +58,29 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           Importar
         </a>
+        <a href="#" class="nav-item" data-view="deudas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20m-7-7l7 7 7-7"/><path d="M5 12h14" stroke-dasharray="2 2"/></svg>
+          Deudas
+        </a>
+        <a href="#" class="nav-item" data-view="estrategia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          Mi Estrategia
+        </a>
+        <a href="#" class="nav-item" data-view="inversiones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Inversiones
+        </a>
+        <div class="sidebar-bottom">
+          <a href="#" class="nav-item" data-view="ajustes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Ajustes
+          </a>
+          <div class="sidebar-email" id="sidebarEmail"></div>
+          <a href="#" class="nav-item nav-logout" onclick="logout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Cerrar Sesion
+          </a>
+        </div>
       </nav>
     </aside>
 
@@ -67,30 +97,31 @@
 
       <!-- DASHBOARD -->
       <div id="view-dashboard" class="view active">
+        <div id="checklistCard" class="checklist-card" style="display:none"></div>
         <div class="kpi-grid">
           <div class="kpi-card kpi-green">
             <div class="kpi-icon">📈</div>
-            <div><span class="kpi-label">Ingresos</span><span class="kpi-value green" id="kpiIngresos">$0</span></div>
+            <div><span class="kpi-label">Ingresos <span class="help-tip" data-tip="Total de depositos y abonos del periodo. Se excluyen transferencias entre tus propias cuentas y prestamos relacionados para no inflar el numero.">?</span></span><span class="kpi-value green" id="kpiIngresos">$0</span></div>
           </div>
           <div class="kpi-card kpi-red">
             <div class="kpi-icon">📉</div>
-            <div><span class="kpi-label">Gastos</span><span class="kpi-value red" id="kpiGastos">$0</span></div>
+            <div><span class="kpi-label">Gastos <span class="help-tip" data-tip="Total de gastos reales del periodo. Se excluyen transferencias propias, ahorro y prestamos relacionados.">?</span></span><span class="kpi-value red" id="kpiGastos">$0</span></div>
           </div>
           <div class="kpi-card">
             <div class="kpi-icon">⚖️</div>
-            <div><span class="kpi-label">Balance</span><span class="kpi-value" id="kpiBalance">$0</span></div>
+            <div><span class="kpi-label">Balance <span class="help-tip" data-tip="Ingresos menos gastos reales. Si es negativo, gastaste mas de lo que ganaste este periodo.">?</span></span><span class="kpi-value" id="kpiBalance">$0</span></div>
           </div>
           <div class="kpi-card">
             <div class="kpi-icon">📊</div>
-            <div><span class="kpi-label">Gasto Diario Prom.</span><span class="kpi-value" id="kpiPromedio">$0</span></div>
+            <div><span class="kpi-label">Gasto Diario Prom. <span class="help-tip" data-tip="Promedio de gasto por dia en el periodo seleccionado. Util para saber cuanto gastas diariamente.">?</span></span><span class="kpi-value" id="kpiPromedio">$0</span></div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-icon">❓</div>
-            <div><span class="kpi-label">Sin Categorizar</span><span class="kpi-value" id="kpiSinCat">0</span></div>
+            <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" style="width:28px;height:28px"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div><span class="kpi-label">Sin Categorizar <span class="help-tip" data-tip="Transacciones que aun no tienen categoria asignada. Ve a Transacciones o Revisar para categorizarlas.">?</span></span><span class="kpi-value" id="kpiSinCat">0</span></div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-icon">🔢</div>
-            <div><span class="kpi-label">Transacciones</span><span class="kpi-value" id="kpiTxCount">0</span></div>
+            <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" style="width:28px;height:28px"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1" fill="#64748b"/><circle cx="8" cy="12" r="1" fill="#64748b"/><circle cx="8" cy="18" r="1" fill="#64748b"/></svg></div>
+            <div><span class="kpi-label">Transacciones <span class="help-tip" data-tip="Cantidad total de movimientos en el periodo seleccionado.">?</span></span><span class="kpi-value" id="kpiTxCount">0</span></div>
           </div>
         </div>
 
@@ -102,31 +133,69 @@
           <div id="debugDetail" class="debug-detail"></div>
         </div>
 
-        <div class="dashboard-section">
-          <h3>Gastos por Categoria <span class="section-hint" id="catFilterHint"></span></h3>
-          <div class="cat-breakdown" id="catBreakdown"></div>
-        </div>
-
         <div class="charts-grid">
           <div class="chart-card">
-            <h3>Distribucion</h3>
+            <h3>Distribucion <span class="help-tip" data-tip="Grafico circular con la proporcion de cada categoria en tus gastos. Haz clic en una porcion para filtrar.">?</span></h3>
             <div class="chart-donut-wrap">
               <canvas id="chartCategorias"></canvas>
               <div class="chart-center" id="chartCenter"></div>
             </div>
           </div>
           <div class="chart-card">
-            <h3>Ingresos vs Gastos por Mes</h3>
+            <h3>Ingresos vs Gastos por Mes <span class="help-tip" data-tip="Comparacion mensual de tus ingresos y gastos reales. Te muestra la tendencia a lo largo del tiempo.">?</span></h3>
             <canvas id="chartMensual"></canvas>
           </div>
         </div>
 
+        <div class="chart-card full-width" id="profileFinanciero">
+          <h3>Tu Perfil Financiero <span class="help-tip" data-tip="Analiza tu situacion desde dos ejes: Patrimonio (lo que tienes menos lo que debes) y Flujo (ingresos menos gastos mensuales). Ambos son importantes: patrimonio es tu colchon, flujo es tu motor.">?</span></h3>
+          <div class="fin-profile-grid">
+            <div class="fin-profile-gauge" id="finGaugePatrimonio">
+              <div class="fin-gauge-label">Patrimonio Neto</div>
+              <div class="fin-gauge-value" id="finPatrimonioValue">$0</div>
+              <div class="fin-gauge-bar-bg"><div class="fin-gauge-bar" id="finPatrimonioBar"></div></div>
+              <div class="fin-gauge-detail" id="finPatrimonioDetail"></div>
+            </div>
+            <div class="fin-profile-gauge" id="finGaugeFlujo">
+              <div class="fin-gauge-label">Flujo Mensual</div>
+              <div class="fin-gauge-value" id="finFlujoValue">$0</div>
+              <div class="fin-gauge-bar-bg"><div class="fin-gauge-bar" id="finFlujoBar"></div></div>
+              <div class="fin-gauge-detail" id="finFlujoDetail"></div>
+            </div>
+          </div>
+          <div id="finDiagnostico" style="margin-top:16px;padding:14px;border-radius:10px;font-size:0.9rem;"></div>
+        </div>
+
+        <div class="chart-card full-width" id="healthSection" style="display:none">
+          <h3>Salud Financiera <span class="help-tip" data-tip="Compara tus gastos por categoria contra benchmarks recomendados. Verde = bien, Amarillo = cuidado, Rojo = alerta.">?</span></h3>
+          <div id="healthGrid" class="health-grid"></div>
+          <div id="healthSummary" style="margin-top:16px;padding:12px;border-radius:8px;font-size:0.9rem;"></div>
+        </div>
+
+        <div class="chart-card full-width" id="trendsSection" style="display:none">
+          <h3>Tendencias vs Mes Anterior <span class="help-tip" data-tip="Muestra si gastaste mas o menos que el mes pasado en cada categoria. Flechas verdes = mejoraste, rojas = gastaste mas.">?</span></h3>
+          <div id="trendsGrid" class="trends-grid"></div>
+        </div>
+
+        <div class="dashboard-section">
+          <h3>Gastos por Categoria <span class="help-tip" data-tip="Desglose de tus gastos reales por categoria. Haz clic en una categoria para filtrar el dashboard solo por ella.">?</span> <span class="section-hint" id="catFilterHint"></span></h3>
+          <div class="cat-breakdown" id="catBreakdown"></div>
+        </div>
+
         <div class="chart-card full-width">
-          <h3>Mayores Gastos del Periodo</h3>
+          <h3>Mayores Gastos del Periodo <span class="help-tip" data-tip="Los 8 gastos mas grandes del periodo seleccionado. Util para detectar gastos grandes o inesperados.">?</span></h3>
           <div id="topGastos" class="top-gastos"></div>
         </div>
 
+        <h3 style="margin-top:24px;margin-bottom:8px;">Deudas y Prestamos</h3>
         <div id="loansSection"></div>
+
+        <!-- INSIGHTS / COACH FINANCIERO -->
+        <div class="chart-card full-width insights-section" id="insightsSection" style="display:none;margin-top:24px;">
+          <h3>💡 Tu Coach Financiero</h3>
+          <p style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:14px;">Analisis automatico basado en tus datos reales.</p>
+          <div id="insightsList" class="insights-list"></div>
+        </div>
       </div>
 
       <!-- TRANSACCIONES -->
@@ -159,7 +228,7 @@
       <!-- REVISAR -->
       <div id="view-revisar" class="view">
         <div class="revisar-header">
-          <p>Revisa las transacciones agrupadas por categoria. Haz clic en <strong>Editar</strong> para corregir cualquier categoria mal asignada.</p>
+          <p>Revisa las transacciones agrupadas por categoria. Haz clic en <strong>Editar</strong> para corregir cualquier categoria mal asignada. <span class="help-tip" data-tip="Aqui puedes ver todas tus transacciones organizadas por categoria. Si una transaccion esta en la categoria equivocada, haz clic en Editar para moverla. El sistema aprende y la proxima vez la categorizara bien automaticamente.">?</span></p>
         </div>
         <div id="revisarList"></div>
       </div>
@@ -167,11 +236,11 @@
       <!-- CATEGORIAS / REGLAS -->
       <div id="view-categorias" class="view">
         <div class="cat-header">
-          <h3>Reglas de Categorizacion</h3>
+          <h3>Reglas de Categorizacion <span class="help-tip" data-tip="Las reglas son palabras clave que categorizan tus transacciones automaticamente. Ejemplo: si una transaccion dice 'copec', la regla la manda a 'Bencina / Auto'. Asi no tienes que categorizar todo a mano.">?</span></h3>
           <p>Palabras clave que asignan categoria automaticamente.</p>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" id="addRuleBtn">+ Nueva Regla</button>
-            <button class="btn btn-primary" id="addCatBtn" style="background:#10b981">+ Nueva Categoria</button>
+            <button class="btn btn-primary" id="addRuleBtn">+ Nueva Regla <span class="help-tip" data-tip="Crea una regla: elige una palabra clave (ej: 'uber') y la categoria donde quieres que caiga (ej: 'Transporte'). Todas las transacciones con esa palabra se categorizan solas.">?</span></button>
+            <button class="btn btn-primary" id="addCatBtn" style="background:#10b981">+ Nueva Categoria <span class="help-tip" data-tip="Crea una categoria nueva con nombre, icono y color. Ejemplo: 'Gimnasio'. Despues puedes crear reglas que manden transacciones a esta categoria.">?</span></button>
             <button class="btn btn-secondary" id="resetRulesBtn">Resetear reglas</button>
           </div>
         </div>
@@ -187,84 +256,17 @@
         <div class="metas-header">
           <p>Define tus objetivos financieros y trackea tu avance real.</p>
         </div>
-
-        <!-- Resumen de metas -->
         <div class="goals-summary" id="goalsSummary"></div>
-
-        <!-- Filtros por plazo -->
         <div class="goals-tabs">
           <button class="goals-tab active" data-filter="all" onclick="filterGoals('all')">Todas</button>
           <button class="goals-tab" data-filter="corto" onclick="filterGoals('corto')">Corto plazo</button>
           <button class="goals-tab" data-filter="mediano" onclick="filterGoals('mediano')">Mediano plazo</button>
           <button class="goals-tab" data-filter="largo" onclick="filterGoals('largo')">Largo plazo</button>
         </div>
-
-        <!-- Lista de metas -->
         <div id="goalsList"></div>
         <div id="goalsEmpty" class="empty-state">Sin metas definidas. Agrega tu primera meta financiera.</div>
-
-        <!-- Boton agregar -->
         <button class="btn btn-primary goals-add-btn" id="addGoalBtn">+ Nueva Meta</button>
-
-        <!-- Frase motivacional -->
         <div class="metas-quote" id="metasQuote"></div>
-
-        <!-- Modal de meta -->
-        <div class="modal-overlay" id="goalModal">
-          <div class="modal-card">
-            <h3 id="goalModalTitle">Nueva Meta</h3>
-            <div style="display:flex;flex-direction:column;gap:12px;padding:0 4px;">
-              <label>Categoria</label>
-              <select id="goalCategory" class="filter-select full-w" onchange="updateGoalForm()">
-                <option value="emergencia">🛡️ Fondo de emergencia</option>
-                <option value="viaje">✈️ Viaje</option>
-                <option value="auto">🚗 Auto</option>
-                <option value="casa">🏠 Pie de casa / propiedad</option>
-                <option value="educacion">🎓 Educacion</option>
-                <option value="negocio">💼 Negocio / emprendimiento</option>
-                <option value="retiro">🏖️ Retiro / libertad financiera</option>
-                <option value="otro">📌 Otro</option>
-              </select>
-              <div id="goalCategoryHint" style="font-size:0.78rem;color:var(--text-secondary);padding:6px 12px;background:var(--bg);border-radius:8px;"></div>
-
-              <label>Nombre de la meta</label>
-              <input type="text" id="goalName" placeholder="ej: Fondo de emergencia 6 meses" class="search-input full-w">
-
-              <label>Monto objetivo (CLP)</label>
-              <input type="number" id="goalTarget" placeholder="ej: 5000000" class="search-input full-w">
-
-              <label>Plazo</label>
-              <select id="goalTerm" class="filter-select full-w">
-                <option value="corto">Corto plazo (menos de 1 año)</option>
-                <option value="mediano">Mediano plazo (1 a 5 años)</option>
-                <option value="largo">Largo plazo (mas de 5 años)</option>
-              </select>
-
-              <label>Fecha objetivo (opcional)</label>
-              <input type="date" id="goalDate" class="search-input full-w">
-
-              <label>Ahorro mensual asignado (CLP)</label>
-              <input type="number" id="goalMonthly" placeholder="ej: 200000" class="search-input full-w">
-
-              <div id="goalDynamicFields"></div>
-
-              <label>Prioridad</label>
-              <select id="goalPriority" class="filter-select full-w">
-                <option value="alta">🔴 Alta — lo necesito si o si</option>
-                <option value="media">🟡 Media — importante pero flexible</option>
-                <option value="baja">🟢 Baja — seria bonito lograrlo</option>
-              </select>
-
-              <label>Notas (opcional)</label>
-              <input type="text" id="goalNotes" placeholder="ej: Para el viaje a Europa en verano" class="search-input full-w">
-            </div>
-            <div class="modal-actions">
-              <button class="btn btn-secondary" id="goalModalCancel">Cancelar</button>
-              <button class="btn btn-danger" id="goalModalDelete" style="display:none">Eliminar</button>
-              <button class="btn btn-primary" id="goalModalSave">Guardar</button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- PATRIMONIO -->
@@ -275,7 +277,7 @@
             <h3>👤 Perfil Financiero</h3>
             <div class="profile-form">
               <div class="profile-row">
-                <label>Valor UF actual <span class="help-tip" data-tip="Valor de la Unidad de Fomento en pesos chilenos. Actualiza este valor periodicamente para mantener los calculos correctos.">?</span></label>
+                <label id="profileUnitLabel">Valor UF actual <span class="help-tip" data-tip="Valor de la unidad indexada de tu pais. Actualiza este valor periodicamente para mantener los calculos correctos.">?</span></label>
                 <input type="number" id="profileUF" value="38800" class="search-input" style="width:120px">
               </div>
               <div class="profile-row">
@@ -306,7 +308,7 @@
             <h3>💰 Resumen Patrimonio</h3>
             <div class="patrimonio-summary" id="patrimonioSummary">
               <div class="pat-kpi">
-                <span class="pat-kpi-label">Patrimonio Neto <span class="help-tip" data-tip="Propiedades (neto deuda) + liquidez (cuentas, depósitos, fondos) + ahorros de cartolas. Todo en CLP.">?</span></span>
+                <span class="pat-kpi-label">Patrimonio Neto <span class="help-tip" data-tip="Suma del valor actual de tus propiedades (convertido a CLP) mas tu ahorro acumulado.">?</span></span>
                 <span class="pat-kpi-value big" id="patNetoTotal">$0</span>
               </div>
               <div class="pat-kpi-row">
@@ -316,7 +318,7 @@
                   <span class="pat-kpi-sub" id="patPropUF"></span>
                 </div>
                 <div class="pat-kpi">
-                  <span class="pat-kpi-label">Liquidez y Ahorros <span class="help-tip" data-tip="Suma de tus cuentas de liquidez (cuenta corriente, depósitos, fondos, etc.) más transacciones categorizadas como Ahorro.">?</span></span>
+                  <span class="pat-kpi-label">Ahorro Acumulado <span class="help-tip" data-tip="Total de transacciones categorizadas como Ahorro en tus cartolas importadas.">?</span></span>
                   <span class="pat-kpi-value" id="patAhorroTotal">$0</span>
                 </div>
               </div>
@@ -344,14 +346,14 @@
 
         <!-- META DE AHORRO -->
         <div class="import-card" style="margin-top:20px">
-          <h3>🎯 Meta de Ahorro Mensual</h3>
+          <h3>🎯 Meta de Ahorro Mensual <span class="help-tip" data-tip="Compara tu meta de ahorro mensual con lo que realmente ahorraste. Para que funcione, categoriza tus transferencias a fondos/APV/inversiones como 'Ahorro'.">?</span></h3>
           <div class="savings-track" id="savingsTrack"></div>
         </div>
 
         <!-- PROPIEDADES -->
         <div class="import-card" style="margin-top:20px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h3>🏠 Propiedades e Inversiones</h3>
+            <h3>🏠 Propiedades e Inversiones <span class="help-tip" data-tip="Agrega tus propiedades, vehiculos o inversiones. Pon el valor en UF, la deuda pendiente, dividendo y plusvalia esperada. El sistema calcula tu patrimonio neto (valor - deuda) y proyecta su crecimiento.">?</span></h3>
             <button class="btn btn-primary" id="addPropertyBtn">+ Agregar</button>
           </div>
           <div id="propertiesList"></div>
@@ -365,7 +367,7 @@
             <button class="btn btn-primary" id="addAccountBtn">+ Agregar</button>
           </div>
           <div id="accountsList"></div>
-          <div id="accountsEmpty" class="empty-state">Sin cuentas registradas. Agrega tu cuenta corriente, depósitos a plazo, fondos mutuos, APV, etc.</div>
+          <div id="accountsEmpty" class="empty-state">Sin cuentas registradas. Agrega tu cuenta corriente, depositos a plazo, fondos mutuos, APV, etc.</div>
           <div id="accountsTotalBar" style="display:none;margin-top:14px;padding:14px 16px;background:var(--green-bg);border-radius:var(--radius-sm);border:1px solid #d1fae5;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <span style="font-size:0.82rem;font-weight:600;color:var(--green);">Total Liquidez</span>
@@ -376,7 +378,7 @@
 
         <!-- PROYECCION JUBILACION -->
         <div class="import-card" style="margin-top:20px">
-          <h3>📈 Proyección hacia Jubilación</h3>
+          <h3>📈 Proyeccion hacia Jubilacion</h3>
           <p style="color:var(--text-secondary);font-size:0.83rem;margin-bottom:16px">Crecimiento estimado de tu patrimonio considerando ahorro mensual, rentabilidad y plusvalia de propiedades.</p>
           <div style="position:relative;width:100%;"><canvas id="chartProjection"></canvas></div>
           <div class="projection-insights" id="projectionInsights"></div>
@@ -435,7 +437,7 @@
       <!-- IMPORTAR -->
       <div id="view-importar" class="view">
         <div class="import-card">
-          <h3>📂 Importar Cartola</h3>
+          <h3>📂 Importar Cartola <span class="help-tip" data-tip="Sube tus cartolas bancarias o estados de cuenta de tarjeta. El sistema detecta automaticamente si es Banco BICE (Excel) o CMR (Excel o PDF). Si subes el mismo archivo dos veces, los duplicados se ignoran.">?</span></h3>
           <p>Sube archivos Excel (.xlsx) o PDF de cualquier banco o tarjeta. Se detecta el formato automaticamente y los duplicados se ignoran.</p>
           <label class="upload-area" id="dropImport">
             <input type="file" id="fileImport" accept=".xlsx,.xls,.pdf" multiple hidden>
@@ -447,12 +449,237 @@
         <div class="import-card" style="margin-top:24px">
           <h3>Datos</h3>
           <div class="import-actions">
-            <button class="btn btn-secondary" id="dedupBtn">Limpiar duplicados</button>
-            <button class="btn btn-secondary" id="exportBtn">Exportar CSV</button>
+            <button class="btn btn-secondary" id="dedupBtn">Limpiar duplicados <span class="help-tip" data-tip="Busca y elimina transacciones repetidas (misma fecha, monto y descripcion). Util si importaste la misma cartola dos veces.">?</span></button>
+            <button class="btn btn-secondary" id="exportBtn">Exportar CSV <span class="help-tip" data-tip="Descarga todas tus transacciones en formato CSV para abrir en Excel o Google Sheets.">?</span></button>
             <button class="btn btn-danger" id="clearBtn">Borrar todo</button>
           </div>
           <div id="storageInfo" class="import-status"></div>
         </div>
+      </div>
+
+      <!-- AJUSTES -->
+      <!-- SIMULADOR ¿ME ALCANZA? -->
+      <!-- MI ESTRATEGIA -->
+      <div id="view-estrategia" class="view">
+        <!-- QUIZ TYPEFORM STYLE -->
+        <div id="estrategiaQuiz" class="tf-quiz">
+          <div class="tf-progress"><div class="tf-progress-fill" id="tfProgressFill"></div></div>
+          <div class="tf-counter" id="tfCounter">1 de 8</div>
+
+          <div class="tf-slides" id="tfSlides">
+            <!-- Q1 -->
+            <div class="tf-slide active" data-q="1">
+              <div class="tf-emoji">🎯</div>
+              <h2 class="tf-question">¿Cuál es tu objetivo principal al invertir?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">🛡️ Proteger lo que tengo de la inflación</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">🏠 Juntar para un objetivo grande (casa, auto)</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">📈 Hacer crecer mi plata a largo plazo</button>
+                <button class="tf-opt" data-val="4" onclick="tfSelect(this)">🔥 Libertad financiera / FIRE</button>
+              </div>
+            </div>
+
+            <!-- Q2 -->
+            <div class="tf-slide" data-q="2">
+              <div class="tf-emoji">⏳</div>
+              <h2 class="tf-question">¿En cuánto tiempo necesitas esta plata?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">📅 Menos de 1 año</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">📆 1 a 3 años</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">🗓️ 3 a 10 años</button>
+                <button class="tf-opt" data-val="4" onclick="tfSelect(this)">♾️ No la necesito, es para el futuro</button>
+              </div>
+            </div>
+
+            <!-- Q3 -->
+            <div class="tf-slide" data-q="3">
+              <div class="tf-emoji">📉</div>
+              <h2 class="tf-question">Imagina que invertiste $10M y baja a $8M. ¿Qué haces?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">😰 Saco todo antes de perder más</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">😟 Saco una parte por si acaso</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">😐 No hago nada, espero que se recupere</button>
+                <button class="tf-opt" data-val="4" onclick="tfSelect(this)">🤑 Meto más plata, está barato</button>
+              </div>
+            </div>
+
+            <!-- Q4 -->
+            <div class="tf-slide" data-q="4">
+              <div class="tf-emoji">🧠</div>
+              <h2 class="tf-question">¿Cuánto cachas de inversiones?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">🌱 Nada, recién estoy aprendiendo</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">🌿 Algo — tengo APV o fondos mutuos</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">🌳 Harto — manejo acciones, ETFs, crypto</button>
+                <button class="tf-opt" data-val="4" onclick="tfSelect(this)">🏔️ Soy profesional / trabajo en finanzas</button>
+              </div>
+            </div>
+
+            <!-- Q5 -->
+            <div class="tf-slide" data-q="5">
+              <div class="tf-emoji">💰</div>
+              <h2 class="tf-question">¿Cuánto de tu ingreso puedes destinar a invertir cada mes?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">😅 Menos del 10% — estoy justo</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">💪 10% a 20% — con algo de esfuerzo</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">🚀 20% a 40% — tengo buen margen</button>
+                <button class="tf-opt" data-val="4" onclick="tfSelect(this)">🏦 Más de 40% — tengo alta capacidad</button>
+              </div>
+            </div>
+
+            <!-- Q6 - INMOBILIARIO -->
+            <div class="tf-slide" data-q="6">
+              <div class="tf-emoji">🏠</div>
+              <h2 class="tf-question">¿Cómo ves la inversión inmobiliaria?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">🤷 No me interesa, prefiero liquidez</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">🏗️ Me gustaría tener una propiedad para vivir</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">🔑 Quiero propiedades para arrendar (renta)</button>
+                <button class="tf-opt" data-val="4" onclick="tfSelect(this)">🏢 Ya tengo y quiero seguir comprando</button>
+              </div>
+            </div>
+
+            <!-- Q7 -->
+            <div class="tf-slide" data-q="7">
+              <div class="tf-emoji">💵</div>
+              <h2 class="tf-question">¿Necesitas que tu plata esté disponible rápido?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">🏃 Sí, la puedo necesitar mañana</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">⚖️ Una parte sí, otra puede esperar</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">🔒 No, puedo dejarla años sin tocarla</button>
+              </div>
+            </div>
+
+            <!-- Q8 -->
+            <div class="tf-slide" data-q="8">
+              <div class="tf-emoji">🌎</div>
+              <h2 class="tf-question">¿Invertirías fuera de Chile?</h2>
+              <div class="tf-options">
+                <button class="tf-opt" data-val="1" onclick="tfSelect(this)">🇨🇱 Prefiero quedarme en Chile</button>
+                <button class="tf-opt" data-val="2" onclick="tfSelect(this)">🌐 Algo afuera está bien, pero mayormente Chile</button>
+                <button class="tf-opt" data-val="3" onclick="tfSelect(this)">🌍 Diversificar globalmente, sin duda</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tf-nav">
+            <button class="tf-back" id="tfBack" onclick="tfPrev()" style="visibility:hidden">← Atrás</button>
+          </div>
+        </div>
+
+        <!-- RESULTADOS -->
+        <div id="estrategiaResult" style="display:none">
+          <div id="perfilCard" class="perfil-card"></div>
+
+          <div class="import-card" style="margin-top:20px">
+            <h3>Tu portafolio actual vs sugerido</h3>
+            <div class="portfolio-compare">
+              <div class="portfolio-chart-wrap">
+                <h4>Actual</h4>
+                <canvas id="chartActual" width="200" height="200"></canvas>
+                <div id="chartActualLegend" class="portfolio-legend"></div>
+              </div>
+              <div class="portfolio-chart-wrap">
+                <h4>Sugerido</h4>
+                <canvas id="chartSugerido" width="200" height="200"></canvas>
+                <div id="chartSugeridoLegend" class="portfolio-legend"></div>
+              </div>
+            </div>
+            <div id="portfolioGaps" style="margin-top:20px"></div>
+          </div>
+
+          <div class="import-card" style="margin-top:20px">
+            <h3>🇨🇱 Recomendaciones para Chile</h3>
+            <div id="recomendaciones"></div>
+          </div>
+
+          <button class="btn btn-secondary" id="quizRedo" style="margin-top:16px;width:100%">Volver a responder</button>
+        </div>
+      </div>
+
+      <!-- DEUDAS -->
+      <div id="view-deudas" class="view">
+        <div class="import-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h3>💳 Mis Deudas</h3>
+            <button class="btn btn-primary" id="addDebtBtn">+ Agregar Deuda</button>
+          </div>
+          <p style="font-size:0.83rem;color:var(--text-secondary);margin-bottom:16px">Registra deudas que tienes o que te deben. Se concilian automaticamente con las transacciones importadas.</p>
+          <div id="debtsList"></div>
+          <div id="debtsEmpty" class="empty-state" style="display:none">Sin deudas registradas. Agrega tu primera deuda.</div>
+        </div>
+
+        <div id="debtsReconciliation"></div>
+      </div>
+
+      <!-- INVERSIONES -->
+      <div id="view-inversiones" class="view">
+        <div class="inv-filters">
+          <div class="inv-cat-tabs" id="invCatTabs">
+            <button class="inv-tab active" data-cat="rentaVariable">📈 Renta Variable</button>
+            <button class="inv-tab" data-cat="rentaFija">📄 Renta Fija</button>
+            <button class="inv-tab" data-cat="caja">💵 Caja</button>
+            <button class="inv-tab" data-cat="inmobiliario">🏠 Inmobiliario</button>
+          </div>
+          <div class="inv-time-tabs" id="invTimeTabs">
+            <button class="inv-time active" data-period="1y">1 Año</button>
+            <button class="inv-time" data-period="6m">6 Meses</button>
+            <button class="inv-time" data-period="1m">1 Mes</button>
+          </div>
+        </div>
+        <div id="invContent"></div>
+      </div>
+
+      <div id="view-ajustes" class="view">
+        <div class="import-card">
+          <h3>👤 Perfil</h3>
+          <div class="profile-form">
+            <div class="profile-row">
+              <label>Pais / Moneda</label>
+              <select id="ajusteCountry" class="filter-select" style="width:180px">
+                <option value="CL">🇨🇱 Chile (CLP)</option>
+                <option value="MX">🇲🇽 Mexico (MXN)</option>
+                <option value="CO">🇨🇴 Colombia (COP)</option>
+                <option value="PE">🇵🇪 Peru (PEN)</option>
+                <option value="AR">🇦🇷 Argentina (ARS)</option>
+                <option value="BR">🇧🇷 Brasil (BRL)</option>
+                <option value="UY">🇺🇾 Uruguay (UYU)</option>
+              </select>
+            </div>
+            <div class="profile-row" id="ajusteUnitRow">
+              <label id="ajusteUnitLabel">Valor UF actual</label>
+              <input type="number" id="ajusteUF" value="38800" class="search-input" style="width:120px">
+            </div>
+            <div class="profile-row">
+              <label>Edad actual</label>
+              <input type="number" id="ajusteAge" min="18" max="90" value="30" class="search-input" style="width:80px">
+            </div>
+            <div class="profile-row">
+              <label>Edad de jubilacion</label>
+              <input type="number" id="ajusteRetireAge" min="30" max="90" value="65" class="search-input" style="width:80px">
+            </div>
+            <div class="profile-row">
+              <label>Gasto mensual al jubilarme</label>
+              <input type="number" id="ajusteMonthlySpend" value="1500000" class="search-input" style="width:140px">
+            </div>
+            <div class="profile-row">
+              <label>Meta ahorro mensual</label>
+              <input type="number" id="ajusteSavingsGoal" value="500000" class="search-input" style="width:140px">
+            </div>
+            <div class="profile-row">
+              <label>Rentabilidad anual esperada (%)</label>
+              <input type="number" id="ajusteReturnRate" min="0" max="30" step="0.5" value="8" class="search-input" style="width:80px">
+            </div>
+          </div>
+        </div>
+
+        <div class="import-card" style="margin-top:20px">
+          <h3>🚦 Semaforos - Limites recomendados (% del ingreso)</h3>
+          <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;">Ajusta los porcentajes maximos recomendados por categoria. Se usan en la seccion "Salud Financiera" del dashboard.</p>
+          <div class="profile-form" id="benchmarkSettings"></div>
+        </div>
+
+        <button class="btn btn-primary" id="saveAjustesBtn" style="margin-top:16px;width:100%;">Guardar Ajustes</button>
       </div>
     </main>
   </div>
@@ -469,10 +696,45 @@
         </div>
         <label style="margin-top:12px">Mes asignado <span class="help-tip" data-tip="Si la transaccion cayo en un mes pero corresponde a otro (ej: sueldo de marzo depositado el 28 de febrero), cambialo aqui.">?</span></label>
         <select id="catMonthSelect" class="filter-select full-w"></select>
+
+        <!-- GOAL LINK -->
+        <div id="goalLinkSection" style="display:none;margin-top:12px">
+          <label>Vincular a meta <span class="help-tip" data-tip="Elige a que meta de ahorro va este monto. El progreso de la meta se actualizara automaticamente.">?</span></label>
+          <select id="catGoalSelect" class="filter-select full-w">
+            <option value="">Sin asignar (ahorro general)</option>
+          </select>
+        </div>
+
+        <!-- SPLIT -->
+        <div id="splitSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <label><strong>Dividir transaccion</strong> <span class="help-tip" data-tip="Divide este movimiento en dos partes con categorias distintas. Ej: un credito de $300.000 donde $150.000 es consumo personal y $150.000 es prestamo empresa.">?</span></label>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <div style="flex:1">
+              <label style="font-size:0.75rem">Parte 1 (monto)</label>
+              <input type="number" id="splitAmount1" class="search-input full-w" placeholder="Monto parte 1">
+            </div>
+            <div style="flex:1">
+              <label style="font-size:0.75rem">Categoria parte 1</label>
+              <input type="text" id="splitCat1" class="search-input full-w" placeholder="Categoria..." readonly>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <div style="flex:1">
+              <label style="font-size:0.75rem">Parte 2 (resto)</label>
+              <input type="number" id="splitAmount2" class="search-input full-w" readonly>
+            </div>
+            <div style="flex:1">
+              <label style="font-size:0.75rem">Categoria parte 2</label>
+              <input type="text" id="splitCat2" class="search-input full-w" placeholder="Categoria...">
+            </div>
+          </div>
+        </div>
+
         <div id="catModalInfo" class="modal-info"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="catModalCancel">Cancelar</button>
+        <button class="btn" id="catModalSplit" style="background:#f59e0b;color:#fff">Dividir</button>
         <button class="btn btn-primary" id="catModalSave">Guardar</button>
       </div>
     </div>
@@ -502,8 +764,10 @@
       <div class="modal-body">
         <label>Nombre</label>
         <input type="text" id="catCreateName" placeholder="ej: Viajes, Gimnasio..." class="search-input full-w">
-        <label style="margin-top:12px">Icono (emoji)</label>
-        <input type="text" id="catCreateIcon" placeholder="ej: ✈️" class="search-input full-w" style="max-width:80px;font-size:1.3rem;text-align:center">
+        <label style="margin-top:12px">Icono</label>
+        <input type="hidden" id="catCreateIcon" value="">
+        <div class="emoji-selected" id="emojiSelected" style="font-size:1.5rem;margin-bottom:6px;">📌</div>
+        <div class="emoji-picker" id="emojiPicker"></div>
         <label style="margin-top:12px">Color</label>
         <input type="color" id="catCreateColor" value="#6366f1" style="width:60px;height:36px;border:none;cursor:pointer;border-radius:8px">
       </div>
@@ -542,24 +806,22 @@
     <div class="modal">
       <h3 id="accountModalTitle">Agregar Cuenta</h3>
       <div class="modal-body">
-        <label>¿Qué tipo de ahorro o inversión es?</label>
+        <label>¿Que tipo de ahorro o inversion es?</label>
         <select id="accType" class="filter-select full-w" onchange="updateAccountForm()">
           <option value="cuenta_corriente">💳 Cuenta Corriente</option>
           <option value="cuenta_ahorro">🏦 Cuenta de Ahorro</option>
-          <option value="deposito_plazo">🔒 Depósito a Plazo</option>
+          <option value="deposito_plazo">🔒 Deposito a Plazo</option>
           <option value="fondo_mutuo">📈 Fondo Mutuo</option>
           <option value="apv">🎯 APV (Ahorro Previsional)</option>
           <option value="etf">📊 ETF / Acciones</option>
           <option value="cripto">₿ Criptomonedas</option>
           <option value="efectivo">💵 Efectivo / Caja</option>
-          <option value="otro">📁 Otra inversión</option>
+          <option value="otro">📁 Otra inversion</option>
         </select>
         <div id="accTypeHint" style="font-size:0.78rem;color:var(--text-secondary);margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:8px;"></div>
-
-        <!-- Campos dinámicos -->
         <div id="accDynamicFields" style="margin-top:14px;display:flex;flex-direction:column;gap:10px;"></div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-actions">
         <button class="btn btn-secondary" id="accModalCancel">Cancelar</button>
         <button class="btn btn-danger" id="accModalDelete" style="display:none">Eliminar</button>
         <button class="btn btn-primary" id="accModalSave">Guardar</button>
@@ -567,6 +829,281 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- MODAL META -->
+  <div class="modal-overlay" id="goalModal">
+    <div class="modal">
+      <h3 id="goalModalTitle">Nueva Meta</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:0 4px;">
+        <label>Categoria</label>
+        <select id="goalCategory" class="filter-select full-w" onchange="updateGoalForm()">
+          <option value="emergencia">🛡️ Fondo de emergencia</option>
+          <option value="viaje">✈️ Viaje</option>
+          <option value="auto">🚗 Auto</option>
+          <option value="casa">🏠 Pie de casa / propiedad</option>
+          <option value="educacion">🎓 Educacion</option>
+          <option value="negocio">💼 Negocio / emprendimiento</option>
+          <option value="retiro">🏖️ Retiro / libertad financiera</option>
+          <option value="otro">📌 Otro</option>
+        </select>
+        <div id="goalCategoryHint" style="font-size:0.78rem;color:var(--text-secondary);padding:6px 12px;background:var(--bg);border-radius:8px;"></div>
+        <label>Nombre de la meta</label>
+        <input type="text" id="goalName" placeholder="ej: Fondo de emergencia 6 meses" class="search-input full-w">
+        <label>Monto objetivo (CLP)</label>
+        <input type="number" id="goalTarget" placeholder="ej: 5000000" class="search-input full-w">
+        <!-- TRADE-IN (solo para auto/casa) -->
+        <div id="goalTradeInSection" style="display:none;margin-top:4px">
+          <label>¿Tienes algo en parte de pago?</label>
+          <input type="number" id="goalTradeIn" placeholder="ej: valor de tu auto actual" class="search-input full-w">
+          <div id="goalTradeInHint" style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px"></div>
+          <div id="goalNetTarget" style="display:none;font-size:0.82rem;font-weight:600;color:var(--primary);margin-top:6px;padding:8px 12px;background:#eef2ff;border-radius:8px"></div>
+        </div>
+        <label>Plazo</label>
+        <select id="goalTerm" class="filter-select full-w">
+          <option value="corto">Corto plazo (menos de 1 año)</option>
+          <option value="mediano">Mediano plazo (1 a 5 años)</option>
+          <option value="largo">Largo plazo (mas de 5 años)</option>
+        </select>
+        <label>Fecha objetivo (opcional)</label>
+        <input type="date" id="goalDate" class="search-input full-w">
+        <label>Ahorro mensual asignado (CLP)</label>
+        <input type="number" id="goalMonthly" placeholder="ej: 200000" class="search-input full-w">
+        <label>Prioridad</label>
+        <select id="goalPriority" class="filter-select full-w">
+          <option value="alta">🔴 Alta — lo necesito si o si</option>
+          <option value="media">🟡 Media — importante pero flexible</option>
+          <option value="baja">🟢 Baja — seria bonito lograrlo</option>
+        </select>
+        <label>Notas (opcional)</label>
+        <input type="text" id="goalNotes" placeholder="ej: Para el viaje a Europa en verano" class="search-input full-w">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="goalModalCancel">Cancelar</button>
+        <button class="btn btn-danger" id="goalModalDelete" style="display:none">Eliminar</button>
+        <button class="btn btn-primary" id="goalModalSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTON FLOTANTE: Me llegó plata -->
+  <button class="fab-windfall" id="fabWindfall" onclick="openWindfall()" title="Me llegó plata">💸</button>
+
+  <!-- MODAL: ¿Qué hago con esta plata? -->
+  <div class="modal-overlay" id="windfallModal">
+    <div class="modal" style="max-width:500px">
+      <h3 id="windfallTitle">💸 Me llegó plata</h3>
+      <div class="modal-body">
+        <!-- PASO 1: Monto -->
+        <div id="wfStep1">
+          <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:16px">¿Te llegó un bono, vendiste algo, herencia, aguinaldo? Dime cuánto y te digo qué hacer.</p>
+          <label class="ob-label">¿Cuánto te llegó?</label>
+          <input type="number" id="wfAmount" class="ob-input" placeholder="ej: 5000000" style="font-size:1.1rem;font-weight:600">
+          <label class="ob-label" style="margin-top:12px">¿De dónde viene? (opcional)</label>
+          <select id="wfSource" class="ob-select">
+            <option value="">Seleccionar...</option>
+            <option value="bono">Bono / Aguinaldo</option>
+            <option value="venta">Venta de algo</option>
+            <option value="herencia">Herencia</option>
+            <option value="freelance">Trabajo extra / Freelance</option>
+            <option value="devolucion">Devolución de impuestos</option>
+            <option value="regalo">Regalo</option>
+            <option value="otro">Otro</option>
+          </select>
+          <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="wfGoToQuiz()">Siguiente →</button>
+        </div>
+        <!-- PASO 2: Mini-quiz -->
+        <div id="wfStep2" style="display:none">
+          <div class="wf-quiz">
+            <div class="wf-quiz-q" id="wfQ1">
+              <p class="wf-quiz-label">¿Qué quieres hacer con esta plata?</p>
+              <div class="wf-quiz-opts">
+                <button class="wf-opt" data-q="intent" data-val="seguridad" onclick="wfSelect(this)">🛡️<span>Guardarla segura</span><small>Que no se la coma la inflación</small></button>
+                <button class="wf-opt" data-q="intent" data-val="crecer" onclick="wfSelect(this)">📈<span>Hacerla crecer</span><small>Invertir para ganar más</small></button>
+                <button class="wf-opt" data-q="intent" data-val="mix" onclick="wfSelect(this)">⚖️<span>Un poco de ambas</span><small>Parte segura, parte agresiva</small></button>
+                <button class="wf-opt" data-q="intent" data-val="disfrutar" onclick="wfSelect(this)">🎉<span>Disfrutarla (y algo invertir)</span><small>Me la merezco, pero con cabeza</small></button>
+              </div>
+            </div>
+            <div class="wf-quiz-q" id="wfQ2" style="display:none">
+              <p class="wf-quiz-label">¿En cuánto tiempo podrías necesitar esta plata?</p>
+              <div class="wf-quiz-opts">
+                <button class="wf-opt" data-q="horizonte" data-val="corto" onclick="wfSelect(this)">⚡<span>En los próximos meses</span><small>Menos de 1 año</small></button>
+                <button class="wf-opt" data-q="horizonte" data-val="medio" onclick="wfSelect(this)">📅<span>En 1-3 años</span><small>Tengo algo de tiempo</small></button>
+                <button class="wf-opt" data-q="horizonte" data-val="largo" onclick="wfSelect(this)">🏔️<span>No la necesito pronto</span><small>+3 años, puedo esperar</small></button>
+              </div>
+            </div>
+            <div class="wf-quiz-q" id="wfQ3" style="display:none">
+              <p class="wf-quiz-label">Con ESTA plata específica, ¿cuánto riesgo toleras?</p>
+              <div class="wf-quiz-opts">
+                <button class="wf-opt" data-q="riesgo" data-val="nada" onclick="wfSelect(this)">🟢<span>Cero riesgo</span><small>Prefiero ganar poco pero seguro</small></button>
+                <button class="wf-opt" data-q="riesgo" data-val="algo" onclick="wfSelect(this)">🟡<span>Algo de riesgo</span><small>Puedo tolerar bajas temporales</small></button>
+                <button class="wf-opt" data-q="riesgo" data-val="full" onclick="wfSelect(this)">🔴<span>Full riesgo</span><small>Vamos con todo, es plata extra</small></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- PASO 3: Resultado -->
+        <div id="wfStep3" style="display:none">
+          <div id="wfResult"></div>
+          <button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="wfBackToStart()">← Cambiar monto</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('windfallModal').classList.remove('open')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING WIZARD -->
+  <div id="onboardingWizard" class="onboarding-overlay" style="display:none">
+    <div class="onboarding-container">
+      <div class="onboarding-progress">
+        <div class="onboarding-dot active" data-step="1">1</div>
+        <div class="onboarding-line"></div>
+        <div class="onboarding-dot" data-step="2">2</div>
+        <div class="onboarding-line"></div>
+        <div class="onboarding-dot" data-step="3">3</div>
+      </div>
+
+      <!-- PASO 1 -->
+      <div class="onboarding-step active" id="obStep1">
+        <h2>Cuéntanos de ti</h2>
+        <p class="ob-subtitle">Para personalizar tu experiencia</p>
+
+        <label class="ob-label">Nombre</label>
+        <input type="text" id="obName" class="ob-input" placeholder="Tu nombre">
+
+        <label class="ob-label">Edad</label>
+        <div class="ob-slider-wrap">
+          <input type="range" id="obAge" min="18" max="80" value="30" class="ob-slider">
+          <span id="obAgeLabel" class="ob-slider-val">30 años</span>
+        </div>
+
+        <label class="ob-label">País</label>
+        <select id="obCountry" class="ob-select">
+          <option value="CL">Chile</option>
+          <option value="MX">México</option>
+          <option value="CO">Colombia</option>
+          <option value="PE">Perú</option>
+          <option value="AR">Argentina</option>
+          <option value="BR">Brasil</option>
+          <option value="UY">Uruguay</option>
+        </select>
+
+        <label class="ob-label">¿Trabajas?</label>
+        <select id="obWork" class="ob-select">
+          <option value="empleado">Sí, empleado</option>
+          <option value="independiente">Sí, independiente</option>
+          <option value="no">No actualmente</option>
+        </select>
+
+        <button class="btn btn-primary ob-btn" onclick="obNext(2)">Siguiente →</button>
+      </div>
+
+      <!-- PASO 2 -->
+      <div class="onboarding-step" id="obStep2">
+        <h2>¿Qué quieres lograr?</h2>
+        <p class="ob-subtitle">Selecciona lo que te interesa</p>
+
+        <div class="ob-goals">
+          <label class="ob-goal-item"><input type="checkbox" value="ordenar"> <span>🧾 Ordenar mis gastos</span></label>
+          <label class="ob-goal-item"><input type="checkbox" value="ahorrar"> <span>💰 Ahorrar más</span></label>
+          <label class="ob-goal-item"><input type="checkbox" value="invertir"> <span>📈 Empezar a invertir</span></label>
+          <label class="ob-goal-item"><input type="checkbox" value="propiedad"> <span>🏠 Comprar una propiedad</span></label>
+          <label class="ob-goal-item"><input type="checkbox" value="retiro"> <span>🏖️ Planificar mi retiro</span></label>
+          <label class="ob-goal-item"><input type="checkbox" value="patrimonio"> <span>📊 Entender mi patrimonio</span></label>
+        </div>
+
+        <label class="ob-label" style="margin-top:20px">Gasto mensual aproximado</label>
+        <div class="ob-slider-wrap">
+          <input type="range" id="obSpend" min="300000" max="15000000" step="100000" value="1500000" class="ob-slider">
+          <span id="obSpendLabel" class="ob-slider-val">$1.500.000</span>
+        </div>
+        <div id="obSpendCustom" style="display:none;margin-top:8px">
+          <input type="number" id="obSpendManual" class="ob-input" placeholder="Ingresa tu gasto mensual" style="font-size:0.85rem">
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <button class="btn btn-secondary ob-btn" onclick="obBack(1)">← Atrás</button>
+          <button class="btn btn-primary ob-btn" onclick="obNext(3)">Siguiente →</button>
+        </div>
+      </div>
+
+      <!-- PASO 3 -->
+      <div class="onboarding-step" id="obStep3">
+        <div class="ob-done-icon">🎉</div>
+        <h2>¡Todo listo!</h2>
+        <div id="obSummary" class="ob-summary"></div>
+
+        <button class="btn btn-primary ob-btn ob-btn-main" onclick="obFinish()">Entrar a mi panel →</button>
+        <button class="btn btn-secondary ob-btn" onclick="obFinishDemo()" style="font-size:0.8rem">Quiero ver con datos de ejemplo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Button -->
+  <a href="mailto:hola@guitacontrol.com?subject=Feedback%20Beta%20GuitaControl" target="_blank" class="feedback-fab" title="Sugerir mejora o reportar error">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    <span class="feedback-fab-label">Feedback</span>
+  </a>
+
+  <script>
+    if (new URLSearchParams(window.location.search).get('demo') === 'true') {
+      window.DEMO_MODE = true;
+    }
+  </script>
+  <!-- App Modules -->
+  <script src="config.js?v=12"></script>
+  <script src="constants.js?v=12"></script>
+  <script src="state.js?v=12"></script>
+  <script src="utils.js?v=12"></script>
+  <script src="toast.js?v=12"></script>
+  <script src="db.js?v=12"></script>
+  <script src="demo-data.js?v=12"></script>
+  <script src="parsers.js?v=12"></script>
+  <script src="onboarding.js?v=12"></script>
+  <script src="nav.js?v=12"></script>
+  <script src="dashboard.js?v=12"></script>
+  <script src="transactions.js?v=12"></script>
+  <script src="patrimonio.js?v=12"></script>
+  <script src="goals.js?v=12"></script>
+  <script src="categories.js?v=12"></script>
+  <script src="deudas.js?v=12"></script>
+  <script src="estrategia.js?v=12"></script>
+  <script src="ajustes.js?v=12"></script>
+  <script src="app.js?v=12"></script>
+  <script>
+    // Demo mode: load everything synchronously, bypass initApp entirely
+    if (window.DEMO_MODE) {
+      try {
+        // Set fake user for sidebar
+        currentUser = { id: 'demo-user-000', email: 'demo@guitacontrol.com', user_metadata: { full_name: 'Usuario Demo' } };
+
+        // Show user email in sidebar
+        var logoEl = document.querySelector('.sidebar-logo');
+        if (logoEl) logoEl.innerHTML = '<img src="logo.png" alt="GuitaControl">';
+        var emailEl = document.getElementById('sidebarEmail');
+        if (emailEl) emailEl.textContent = 'Modo demo';
+
+        // Load demo data directly
+        if (typeof loadDemoData === 'function') {
+          loadDemoData();
+        }
+
+        // Render
+        if (typeof refreshAll === 'function') {
+          refreshAll();
+        }
+
+        // Inject demo UI
+        if (typeof injectDemoUI === 'function') {
+          injectDemoUI();
+        }
+      } catch(e) {
+        document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif">' +
+          '<h2>Error cargando demo</h2><p>' + e.message + '</p>' +
+          '<p style="color:#999;font-size:12px">' + (e.stack || '').substring(0, 300) + '</p>' +
+          '<a href="login.html" style="color:#4f46e5">← Volver al login</a></div>';
+      }
+    }
+  </script>
 </body>
 </html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GuitaControl - Iniciar Sesion</title>
+  <meta name="description" content="Controla tus finanzas personales. Importa cartolas, analiza gastos, proyecta tu patrimonio.">
+  <meta property="og:title" content="GuitaControl - Finanzas Personales">
+  <meta property="og:description" content="Controla tus gastos, ahorra e invierte con inteligencia.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f9fb; --surface: #fff; --text: #0f172a; --text-secondary: #64748b;
+      --border: #e2e8f0; --accent: #3da861; --accent-hover: #2d8a4e; --accent-light: #ecfdf5;
+      --green: #059669; --red: #dc2626;
+      --radius: 16px; --radius-sm: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+      --font: 'Inter', -apple-system, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font); background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .login-card {
+      background: var(--surface); border-radius: var(--radius); padding: 40px;
+      width: 420px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo img { height: 48px; margin-bottom: 8px; }
+    .login-logo p { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
+
+    .tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--bg); border-radius: var(--radius-sm); padding: 4px; }
+    .tab {
+      flex: 1; padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600;
+      border: none; background: transparent; cursor: pointer; border-radius: 8px;
+      color: var(--text-secondary); transition: all 0.15s; font-family: var(--font);
+    }
+    .tab.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-family: var(--font); font-size: 0.9rem; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+
+    .btn-login {
+      width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 8px;
+    }
+    .btn-login:hover { background: var(--accent-hover); }
+    .btn-login:active { transform: scale(0.98); }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-login { -webkit-tap-highlight-color: transparent; }
+
+    .error-msg {
+      margin-top: 12px; padding: 10px 14px; background: #fef2f2; color: var(--red);
+      border-radius: 8px; font-size: 0.82rem; display: none;
+    }
+    .success-msg {
+      margin-top: 12px; padding: 10px 14px; background: #ecfdf5; color: var(--green);
+      border-radius: 8px; font-size: 0.82rem; display: none;
+    }
+    .success-msg.big {
+      text-align: center; padding: 24px 20px; font-size: 0.92rem; line-height: 1.6;
+    }
+    .success-msg.big .success-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .success-msg.big strong { display: block; font-size: 1rem; margin-bottom: 8px; }
+
+    .forgot-link {
+      display: block; text-align: center; margin-top: 14px; font-size: 0.8rem;
+      color: var(--text-secondary); cursor: pointer; text-decoration: none;
+    }
+    .forgot-link:hover { color: var(--accent); }
+
+    .login-footer { text-align: center; margin-top: 20px; font-size: 0.78rem; color: var(--text-secondary); }
+
+    .back-link {
+      display: none; text-align: center; margin-bottom: 16px; font-size: 0.82rem;
+      color: var(--accent); cursor: pointer;
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="logo.png" alt="GuitaControl">
+      <p>Controla tus finanzas personales</p>
+    </div>
+
+    <div class="back-link" id="backLink" onclick="showTab('login')">← Volver a Iniciar Sesion</div>
+
+    <div class="tabs" id="tabsWrap">
+      <button class="tab active" id="tabLogin" onclick="showTab('login')">Iniciar Sesion</button>
+      <button class="tab" id="tabRegister" onclick="showTab('register')">Crear Cuenta</button>
+    </div>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="tu@email.com" autocomplete="email">
+      </div>
+      <div class="form-group" id="passwordGroup">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="form-group" id="nameGroup" style="display:none">
+        <label>Nombre</label>
+        <input type="text" id="fullName" placeholder="Tu nombre">
+      </div>
+      <button type="button" class="btn-login" id="submitBtn" onclick="handleSubmit()">Iniciar Sesión</button>
+    </div>
+
+    <a class="forgot-link" id="forgotLink" onclick="showTab('forgot')">Olvide mi contrasena</a>
+
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="success-msg" id="successMsg"></div>
+
+    <div style="text-align:center;margin-top:16px;">
+      <a href="index.html?demo=true" style="display:inline-block;padding:10px 24px;background:#f1f5f9;color:#4f46e5;border-radius:10px;font-size:0.85rem;font-weight:600;text-decoration:none;font-family:var(--font);transition:background 0.15s;">👀 Ver demo sin registrarse</a>
+    </div>
+
+    <div class="login-footer">
+      Tus datos son privados y solo tú puedes verlos.
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    var sb, mode = 'login';
+    try {
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      sb.auth.getSession().then(function(res) {
+        if (res.data && res.data.session) window.location.href = 'index.html';
+      }).catch(function(e) { console.error('Session check error:', e); });
+    } catch(e) {
+      console.error('Supabase init error:', e);
+      document.getElementById('errorMsg').textContent = 'Error conectando al servidor. Recarga la página.';
+      document.getElementById('errorMsg').style.display = '';
+    }
+
+    function showTab(tab) {
+      mode = tab;
+      var errorEl = document.getElementById('errorMsg');
+      var successEl = document.getElementById('successMsg');
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      if (tab === 'forgot') {
+        document.getElementById('tabsWrap').style.display = 'none';
+        document.getElementById('backLink').style.display = '';
+        document.getElementById('passwordGroup').style.display = 'none';
+        document.getElementById('nameGroup').style.display = 'none';
+        document.getElementById('forgotLink').style.display = 'none';
+        document.getElementById('submitBtn').textContent = 'Enviar link de recuperacion';
+        document.getElementById('password').removeAttribute('required');
+        return;
+      }
+
+      document.getElementById('tabsWrap').style.display = '';
+      document.getElementById('backLink').style.display = 'none';
+      document.getElementById('passwordGroup').style.display = '';
+      document.getElementById('forgotLink').style.display = '';
+      document.getElementById('password').setAttribute('required', '');
+
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('nameGroup').style.display = tab === 'register' ? '' : 'none';
+      document.getElementById('submitBtn').textContent = tab === 'login' ? 'Iniciar Sesion' : 'Crear Cuenta';
+    }
+
+    async function handleSubmit() {
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+      var btn = document.getElementById('submitBtn');
+      var errorEl = document.getElementById('errorMsg');
+      var successEl = document.getElementById('successMsg');
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      // Validación manual para que se vea en móvil
+      if (!sb) { errorEl.textContent = 'Error de conexión. Recarga la página.'; errorEl.style.display = ''; return; }
+      if (!email) { errorEl.textContent = 'Ingresa tu email'; errorEl.style.display = ''; return; }
+      if (mode !== 'forgot' && !password) { errorEl.textContent = 'Ingresa tu contraseña'; errorEl.style.display = ''; return; }
+      if (mode !== 'forgot' && password.length < 6) { errorEl.textContent = 'La contraseña debe tener al menos 6 caracteres'; errorEl.style.display = ''; return; }
+
+      btn.disabled = true;
+      var originalText = btn.textContent;
+      btn.textContent = 'Cargando...';
+
+      try {
+        if (mode === 'forgot') {
+          var redirectUrl = (typeof APP_URL !== 'undefined' ? APP_URL : window.location.origin) + '/login.html';
+          var res = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
+          if (res.error) throw res.error;
+          successEl.textContent = 'Te enviamos un link a ' + email + '. Revisa tu bandeja de entrada (y spam).';
+          successEl.style.display = '';
+        } else if (mode === 'register') {
+          var name = document.getElementById('fullName').value;
+          var redirectUrl = (typeof APP_URL !== 'undefined' ? APP_URL : window.location.origin) + '/index.html';
+          var res = await sb.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              data: { full_name: name },
+              emailRedirectTo: redirectUrl
+            }
+          });
+          if (res.error) throw res.error;
+          // If auto-confirmed with active session, go straight in
+          if (res.data.session && res.data.user && res.data.user.email_confirmed_at) {
+            window.location.href = 'index.html';
+          } else {
+            // Always show confirmation message
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('tabsWrap').style.display = 'none';
+            document.getElementById('forgotLink').style.display = 'none';
+            successEl.className = 'success-msg big';
+            successEl.style.display = '';
+            successEl.innerHTML = '<div class="success-icon">📬</div>' +
+              '<strong>¡Revisa tu bandeja de entrada!</strong><br>' +
+              'Te enviamos un email a <strong>' + email + '</strong> para activar tu cuenta.<br><br>' +
+              'Haz click en el link del correo y vuelve aquí para iniciar sesión.<br><br>' +
+              '<span style="font-size:0.8rem;color:var(--text-secondary)">¿No lo encuentras? Revisa tu carpeta de spam o correo no deseado.</span><br><br>' +
+              '<a href="#" onclick="showTab(\'login\');document.getElementById(\'loginForm\').style.display=\'\';return false;" style="color:var(--accent);font-size:0.85rem">← Ya confirmé, iniciar sesión</a>';
+          }
+        } else {
+          var res = await sb.auth.signInWithPassword({ email: email, password: password });
+          if (res.error) throw res.error;
+          window.location.href = 'index.html';
+        }
+      } catch (err) {
+        var msg = err.message || 'Error desconocido';
+        if (msg === 'Invalid login credentials') msg = 'Email o contraseña incorrectos';
+        else if (msg.indexOf('already registered') >= 0) msg = 'Este email ya tiene cuenta. Inicia sesión.';
+        else if (msg.indexOf('Password') >= 0 && msg.indexOf('6') >= 0) msg = 'La contraseña debe tener al menos 6 caracteres';
+        else if (msg.indexOf('rate limit') >= 0 || msg.indexOf('429') >= 0) msg = 'Demasiados intentos. Espera un momento e intenta de nuevo.';
+        else if (msg.indexOf('network') >= 0 || msg.indexOf('fetch') >= 0) msg = 'Error de conexión. Revisa tu internet e intenta de nuevo.';
+        errorEl.textContent = msg;
+        errorEl.style.display = '';
+        console.error('Auth error:', err);
+      }
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+
+    // Handle password reset flow (user arrives with recovery token)
+    sb.auth.onAuthStateChange(function(event, session) {
+      if (event === 'PASSWORD_RECOVERY') {
+        var newPass = prompt('Ingresa tu nueva contrasena (minimo 6 caracteres):');
+        if (newPass && newPass.length >= 6) {
+          sb.auth.updateUser({ password: newPass }).then(function(res) {
+            if (res.error) {
+              alert('Error: ' + res.error.message);
+            } else {
+              alert('Contrasena actualizada. Bienvenido!');
+              window.location.href = 'index.html';
+            }
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
