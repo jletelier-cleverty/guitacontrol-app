@@ -41,11 +41,13 @@ document.querySelectorAll('.nav-item').forEach(function(item) {
 });
 
 // ---- MOBILE MENU ----
-document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+var _mobileMenuBtn = document.getElementById('mobileMenuBtn');
+if (_mobileMenuBtn) _mobileMenuBtn.addEventListener('click', function() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('mobileOverlay').classList.toggle('open');
 });
-document.getElementById('mobileOverlay').addEventListener('click', function() {
+var _mobileOverlay = document.getElementById('mobileOverlay');
+if (_mobileOverlay) _mobileOverlay.addEventListener('click', function() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('mobileOverlay').classList.remove('open');
 });
@@ -60,7 +62,8 @@ function populateMonthFilter() {
   sel.value = cur || 'all';
 }
 
-document.getElementById('monthFilter').addEventListener('change', function() { activeCatFilter='all'; refreshAll(); });
+var _monthFilter = document.getElementById('monthFilter');
+if (_monthFilter) _monthFilter.addEventListener('change', function() { activeCatFilter='all'; refreshAll(); });
 
 // ---- FILTER FUNCTIONS ----
 function getFilteredAll() {
