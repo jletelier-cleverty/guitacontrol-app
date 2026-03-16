@@ -715,7 +715,10 @@
             </div>
             <div style="flex:1">
               <label style="font-size:0.75rem">Categoria parte 1</label>
-              <input type="text" id="splitCat1" class="search-input full-w" placeholder="Categoria..." readonly>
+              <div class="autocomplete-wrap">
+                <input type="text" id="splitCat1" class="search-input full-w" placeholder="Categoria..." autocomplete="off">
+                <div class="autocomplete-list" id="splitCat1List"></div>
+              </div>
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
@@ -725,7 +728,10 @@
             </div>
             <div style="flex:1">
               <label style="font-size:0.75rem">Categoria parte 2</label>
-              <input type="text" id="splitCat2" class="search-input full-w" placeholder="Categoria...">
+              <div class="autocomplete-wrap">
+                <input type="text" id="splitCat2" class="search-input full-w" placeholder="Categoria..." autocomplete="off">
+                <div class="autocomplete-list" id="splitCat2List"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1065,7 +1071,7 @@
   <script src="transactions.js?v=15"></script>
   <script src="patrimonio.js?v=15"></script>
   <script src="goals.js?v=15"></script>
-  <script src="categories.js?v=15"></script>
+  <script src="categories.js?v=16"></script>
   <script src="deudas.js?v=15"></script>
   <script src="estrategia.js?v=15"></script>
   <script src="ajustes.js?v=15"></script>

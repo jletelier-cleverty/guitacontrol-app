@@ -251,6 +251,50 @@ document.getElementById('catModalSave').addEventListener('click', async function
   refreshAll();
 });
 
+// ---- SPLIT CATEGORY AUTOCOMPLETE ----
+(function() {
+  ['splitCat1', 'splitCat2'].forEach(function(id) {
+    var input = document.getElementById(id);
+    var list = document.getElementById(id + 'List');
+    if (!input || !list) return;
+
+    function renderList(filter) {
+      var query = (filter || '').toLowerCase();
+      var opts = getCatOptions().filter(function(c) {
+        return !query || c.toLowerCase().indexOf(query) >= 0;
+      });
+      list.innerHTML = opts.map(function(c) {
+        return '<div class="autocomplete-item" data-cat="' + c + '"><span class="ac-icon">' + getCatIcon(c) + '</span><span class="ac-name">' + c + '</span></div>';
+      }).join('');
+      if (opts.length > 0) list.classList.add('open');
+      else list.classList.remove('open');
+    }
+
+    input.addEventListener('input', function() { renderList(input.value); });
+    input.addEventListener('focus', function() { renderList(input.value); });
+    list.addEventListener('click', function(e) {
+      var item = e.target.closest('.autocomplete-item');
+      if (!item) return;
+      input.value = item.dataset.cat;
+      list.classList.remove('open');
+    });
+    input.addEventListener('keydown', function(e) {
+      var items = list.querySelectorAll('.autocomplete-item');
+      var idx = -1;
+      items.forEach(function(el, i) { if (el.classList.contains('highlighted')) idx = i; });
+      if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx + 1, items.length - 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx - 1, 0); }
+      else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); input.value = items[idx].dataset.cat; list.classList.remove('open'); return; }
+      else if (e.key === 'Escape') { list.classList.remove('open'); return; }
+      else return;
+      items.forEach(function(el, i) { el.classList.toggle('highlighted', i === idx); });
+    });
+    document.getElementById('catModal').addEventListener('click', function(e) {
+      if (!e.target.closest('.autocomplete-wrap')) list.classList.remove('open');
+    });
+  });
+})();
+
 // ---- RULES ----
 function renderRules() {
   var list = document.getElementById('rulesList');
