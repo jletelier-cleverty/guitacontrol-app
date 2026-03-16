@@ -704,22 +704,15 @@ async function importFile(file) {
     var bank = detectBankPdf(lineText);
     var label = BANK_LABELS[bank] || bank;
     var parsed = [];
+    // Route to specific parser ONLY when bank is positively detected
     if (bank === 'bchile') parsed = parseBChilePdf(lineText);
     else if (bank === 'visa') parsed = parseVisaPdf(lineText);
     else if (bank === 'cmr') parsed = parseCMRPdf(lineText);
-    // If specific parser returned nothing or bank unknown, try all
-    if (parsed.length === 0) {
-      parsed = parseBChilePdf(lineText);
-      if (parsed.length > 0 && bank === 'desconocido') label = 'Cuenta Corriente';
-    }
-    if (parsed.length === 0) {
-      parsed = parseVisaPdf(lineText);
-      if (parsed.length > 0 && bank === 'desconocido') label = 'Tarjeta Credito';
-    }
-    if (parsed.length === 0) {
-      parsed = parseCMRPdf(lineText);
-      if (parsed.length > 0 && bank === 'desconocido') label = 'Tarjeta Credito';
-    }
+    else if (bank === 'bice') parsed = parseBChilePdf(lineText); // BICE PDF uses similar format
+    // If bank not detected or specific parser failed, try all PDF parsers
+    if (parsed.length === 0) { parsed = parseBChilePdf(lineText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
+    if (parsed.length === 0) { parsed = parseVisaPdf(lineText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
+    if (parsed.length === 0) { parsed = parseCMRPdf(lineText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
     return { results: await addParsedTransactions(parsed), source: label };
   } else {
     var ab = await file.arrayBuffer();
@@ -727,17 +720,16 @@ async function importFile(file) {
     var bank = detectBankExcel(wb);
     var label = BANK_LABELS[bank] || bank;
     var parsed = [];
-    // Route to specific parser based on detected bank
+    // Route to specific parser ONLY when bank is positively detected
     if (bank === 'bice') parsed = parseBICE(wb);
     else if (bank === 'cmr') parsed = parseCMRExcel(wb);
     else if (bank === 'visa') parsed = parseVisaExcel(wb);
     else if (bank === 'bchile') parsed = parseBChileExcel(wb);
-    // If specific parser returned nothing or bank not recognized, try all
-    if (parsed.length === 0) { parsed = parseBICE(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Banco' : label; }
-    if (parsed.length === 0) { parsed = parseBChileExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Cuenta Corriente' : label; }
-    if (parsed.length === 0) { parsed = parseVisaExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Tarjeta Credito' : label; }
-    if (parsed.length === 0) { parsed = parseCMRExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Tarjeta Credito' : label; }
-    if (parsed.length === 0) { parsed = parseGenericExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Auto-detectado' : label; }
+    // If bank not detected or specific parser failed, use generic first
+    if (parsed.length === 0) {
+      parsed = parseGenericExcel(wb);
+      if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado';
+    }
     if (parsed.length === 0) return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
     return { results: await addParsedTransactions(parsed), source: label };
   }
