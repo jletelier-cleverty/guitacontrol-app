@@ -360,6 +360,212 @@ function parseVisaPdf(text) {
   return results;
 }
 
+// ---- BANCO DE CHILE — Cuenta Corriente (Saldos y Movimientos) ----
+
+function parseBChileExcel(workbook) {
+  var sheet = workbook.Sheets[workbook.SheetNames[0]];
+  var raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  var results = [];
+  var headerRow = -1, colFecha = -1, colDesc = -1, colCargos = -1, colAbonos = -1;
+  for (var i = 0; i < Math.min(raw.length, 30); i++) {
+    var row = raw[i];
+    if (!row) continue;
+    for (var j = 0; j < row.length; j++) {
+      var v = String(row[j] || '').trim().toLowerCase();
+      if (v === 'fecha') colFecha = j;
+      if (v.indexOf('descripci') >= 0) colDesc = j;
+      if (v.indexOf('cargo') >= 0 && v.indexOf('clp') >= 0) colCargos = j;
+      if (v.indexOf('abono') >= 0 && v.indexOf('clp') >= 0) colAbonos = j;
+    }
+    if (colFecha >= 0 && colDesc >= 0 && (colCargos >= 0 || colAbonos >= 0)) {
+      headerRow = i;
+      break;
+    }
+    colFecha = colDesc = colCargos = colAbonos = -1;
+  }
+  if (headerRow === -1) return results;
+
+  for (var i = headerRow + 1; i < raw.length; i++) {
+    var row = raw[i];
+    if (!row) continue;
+    var dateStr = String(row[colFecha] || '').trim();
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) continue;
+    var parts = dateStr.split('/').map(Number);
+    var dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (isNaN(dateObj.getTime())) continue;
+
+    var desc = cleanDescBChile(String(row[colDesc] || '').trim());
+    if (!desc) continue;
+
+    var cargo = colCargos >= 0 ? (Number(row[colCargos]) || 0) : 0;
+    var abono = colAbonos >= 0 ? (Number(row[colAbonos]) || 0) : 0;
+    var amount = Math.round(cargo || abono);
+    if (amount === 0) continue;
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount,
+      type: abono > 0 ? 'ingreso' : 'gasto',
+      source: 'banco', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+  }
+  return results;
+}
+
+function parseBChilePdf(text) {
+  var results = [];
+  var lines = text.split('\n');
+  // Find lines with dd/mm/yyyy pattern followed by description and amounts
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    var dm = line.match(/^(\d{2}\/\d{2}\/\d{4})$/);
+    if (!dm) continue;
+    var parts = dm[1].split('/').map(Number);
+    var dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (isNaN(dateObj.getTime())) continue;
+
+    // Collect description and amounts from following lines
+    var desc = '', cargo = 0, abono = 0, j = i + 1;
+    // Description lines until we hit amounts or next date
+    while (j < lines.length) {
+      var l = lines[j].trim();
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(l)) break; // next date
+      // Amount line: just a number with commas/dots
+      if (/^[\d.,]+$/.test(l.replace(/\s/g, ''))) {
+        var num = parseInt(l.replace(/[.,\s]/g, '')) || 0;
+        if (num > 0) {
+          if (!cargo && !abono) cargo = num; // first number could be cargo or abono
+          // We need context to distinguish; collect all numbers
+        }
+        j++;
+        continue;
+      }
+      if (l && !/^(Infórmate|©|Saldo|Cupo|Total|Movimientos al|Fecha|Descripci|Canal|Cargo|Abono|Retenci|Línea)/.test(l)) {
+        desc += (desc ? ' ' : '') + l;
+      }
+      j++;
+      if (j - i > 8) break; // safety
+    }
+    if (!desc) continue;
+    desc = cleanDescBChile(desc);
+
+    // Try to find amount: look at the numbers after the description
+    // Scan lines after date for numbers
+    var amounts = [];
+    for (var k = i + 1; k < Math.min(j, i + 8); k++) {
+      var numMatch = lines[k].trim().replace(/\s/g, '').match(/^([\d.,]+)$/);
+      if (numMatch) amounts.push(parseInt(numMatch[1].replace(/[.,]/g, '')) || 0);
+    }
+    if (amounts.length === 0) continue;
+
+    // In BChile PDF: cargo, then abono (if present), then saldo
+    // If there's a "Traspaso De:" it's an abono, "Traspaso A:" is cargo
+    var isAbono = desc.toLowerCase().indexOf('traspaso de:') >= 0 ||
+                  desc.toLowerCase().indexOf('deposito') >= 0 ||
+                  desc.toLowerCase().indexOf('abono') >= 0;
+    var amount = amounts[0];
+    if (amount === 0) continue;
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount,
+      type: isAbono ? 'ingreso' : 'gasto',
+      source: 'banco', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+    i = j - 1; // skip processed lines
+  }
+  return results;
+}
+
+function cleanDescBChile(desc) {
+  return desc.replace(/^Pago:/i, '').replace(/\s+/g, ' ').trim();
+}
+
+// ---- GENERIC FALLBACK PARSER ----
+
+function parseGenericExcel(workbook) {
+  var sheet = workbook.Sheets[workbook.SheetNames[0]];
+  var raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  var results = [];
+  var headerRow = -1, colFecha = -1, colDesc = -1, colMonto = -1, colCargos = -1, colAbonos = -1;
+
+  for (var i = 0; i < Math.min(raw.length, 30); i++) {
+    var row = raw[i];
+    if (!row) continue;
+    for (var j = 0; j < row.length; j++) {
+      var v = String(row[j] || '').trim().toLowerCase();
+      if (v === 'fecha' || v === 'date') colFecha = j;
+      if (v.indexOf('descripci') >= 0 || v.indexOf('detalle') >= 0 || v === 'glosa' || v === 'description') colDesc = j;
+      if (v === 'monto' || v === 'amount' || v.indexOf('monto total') >= 0) colMonto = j;
+      if (v.indexOf('cargo') >= 0 && v.indexOf('total') === -1) colCargos = j;
+      if (v.indexOf('abono') >= 0 && v.indexOf('total') === -1) colAbonos = j;
+    }
+    if (colFecha >= 0 && colDesc >= 0 && (colMonto >= 0 || colCargos >= 0 || colAbonos >= 0)) {
+      headerRow = i;
+      break;
+    }
+    colFecha = colDesc = colMonto = colCargos = colAbonos = -1;
+  }
+  if (headerRow === -1) return results;
+
+  for (var i = headerRow + 1; i < raw.length; i++) {
+    var row = raw[i];
+    if (!row || !row[colFecha]) continue;
+
+    var dateObj = parseFlexDate(row[colFecha]);
+    if (!dateObj) continue;
+
+    var desc = String(row[colDesc] || '').replace(/\s+/g, ' ').trim();
+    if (!desc) continue;
+
+    var amount = 0, type = 'gasto';
+    if (colMonto >= 0) {
+      amount = Math.round(Math.abs(Number(String(row[colMonto]).replace(/[\$\.,\s]/g, '')) || 0));
+      if (Number(String(row[colMonto]).replace(/[\$\.\s]/g, '').replace(',', '.')) < 0) type = 'ingreso';
+    } else {
+      var cargo = colCargos >= 0 ? (Number(row[colCargos]) || 0) : 0;
+      var abono = colAbonos >= 0 ? (Number(row[colAbonos]) || 0) : 0;
+      amount = Math.round(cargo || abono);
+      if (abono > 0) type = 'ingreso';
+    }
+    if (amount === 0) continue;
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount, type: type,
+      source: 'banco', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+  }
+  return results;
+}
+
+function parseFlexDate(val) {
+  if (!val) return null;
+  if (typeof val === 'number') {
+    var d = new Date((val - 25569) * 86400000);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  var s = String(val).trim();
+  // dd/mm/yyyy or dd-mm-yyyy
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) { var d = new Date(+m[3], +m[2]-1, +m[1]); return isNaN(d.getTime()) ? null : d; }
+  // yyyy-mm-dd
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) { var d = new Date(+m[1], +m[2]-1, +m[3]); return isNaN(d.getTime()) ? null : d; }
+  // "01 Ene 2026" style
+  var months = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
+                jan:0,apr:3,aug:7,dec:11};
+  m = s.match(/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/i);
+  if (m && months[m[2].toLowerCase()] !== undefined) {
+    var d = new Date(+m[3], months[m[2].toLowerCase()], +m[1]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
 function cleanDescVisa(desc) {
   return desc.replace(/\s+/g, ' ').replace(/\s*(COMPRAS?|CL)\s*$/i, '').replace(/\s+/g, ' ').trim();
 }
@@ -451,7 +657,11 @@ async function importFile(file) {
       });
       lineText += line.trim() + '\n';
     }
-    // Try Visa PDF first (Banco de Chile), then CMR
+    // Try each PDF parser in order
+    var bchilePdfParsed = parseBChilePdf(lineText);
+    if (bchilePdfParsed.length > 0) {
+      return { results: await addParsedTransactions(bchilePdfParsed), source: 'Banco de Chile' };
+    }
     var visaPdfParsed = parseVisaPdf(lineText);
     if (visaPdfParsed.length > 0) {
       return { results: await addParsedTransactions(visaPdfParsed), source: 'TC Visa' };
@@ -472,6 +682,15 @@ async function importFile(file) {
     var visaParsed = parseVisaExcel(wb);
     if (visaParsed.length > 0) {
       return { results: await addParsedTransactions(visaParsed), source: 'TC Visa' };
+    }
+    var bchileParsed = parseBChileExcel(wb);
+    if (bchileParsed.length > 0) {
+      return { results: await addParsedTransactions(bchileParsed), source: 'Banco de Chile' };
+    }
+    // Fallback: try generic parser for any Excel with Fecha/Descripcion/Monto columns
+    var genericParsed = parseGenericExcel(wb);
+    if (genericParsed.length > 0) {
+      return { results: await addParsedTransactions(genericParsed), source: 'Auto-detectado' };
     }
     return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
   }
