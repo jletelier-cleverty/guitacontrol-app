@@ -257,8 +257,11 @@
       btn.textContent = originalText;
     }
 
+    // Backup: add event listener in case inline onclick fails
+    document.getElementById('submitBtn').addEventListener('click', function() { handleSubmit(); });
+
     // Handle password reset flow (user arrives with recovery token)
-    sb.auth.onAuthStateChange(function(event, session) {
+    if (sb) sb.auth.onAuthStateChange(function(event, session) {
       if (event === 'PASSWORD_RECOVERY') {
         var newPass = prompt('Ingresa tu nueva contrasena (minimo 6 caracteres):');
         if (newPass && newPass.length >= 6) {
@@ -272,6 +275,10 @@
           });
         }
       }
+    });
+    // Also allow Enter key to submit
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && mode !== 'forgot') handleSubmit();
     });
   </script>
 </body>
