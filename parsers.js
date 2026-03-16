@@ -255,6 +255,115 @@ function parseCMRPdf(text) {
   return results;
 }
 
+// ---- VISA / BANCO DE CHILE (Saldo y Mov No Facturado) ----
+
+function parseVisaExcel(workbook) {
+  var sheet = workbook.Sheets[workbook.SheetNames[0]];
+  var raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  var results = [];
+  // Detect by looking for "Movimientos Nacionales" or header row with Fecha/Descripción/Monto
+  var headerRow = -1;
+  for (var i = 0; i < Math.min(raw.length, 25); i++) {
+    var row = raw[i];
+    if (!row) continue;
+    var joined = row.map(function(c) { return String(c || '').trim().toLowerCase(); }).join('|');
+    if (joined.indexOf('fecha') >= 0 && joined.indexOf('monto') >= 0) {
+      headerRow = i;
+      break;
+    }
+  }
+  if (headerRow === -1) return results;
+
+  for (var i = headerRow + 1; i < raw.length; i++) {
+    var row = raw[i];
+    if (!row) continue;
+    // Date in col 1, description in col 4, amount in col 10 (or last numeric col)
+    var dateStr = String(row[1] || '').trim();
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) continue;
+    var parts = dateStr.split('/').map(Number);
+    var dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (isNaN(dateObj.getTime())) continue;
+
+    // Description: col 4, sometimes city spills to col 6
+    var desc = String(row[4] || '').trim();
+    var city = String(row[6] || '').trim();
+    if (city && city !== 'undefined') desc = desc + ' ' + city;
+    desc = cleanDescVisa(desc);
+    if (!desc) continue;
+
+    // Amount: find last numeric value in the row
+    var amount = 0;
+    for (var j = row.length - 1; j >= 7; j--) {
+      var v = Number(row[j]);
+      if (v && !isNaN(v)) { amount = Math.round(v); break; }
+    }
+    if (amount === 0) continue;
+
+    var isPay = amount < 0 || desc.toLowerCase().indexOf('pago') >= 0 && desc.toLowerCase().indexOf('tef') >= 0;
+    if (isPay) amount = Math.abs(amount);
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount,
+      type: isPay ? 'ingreso' : 'gasto',
+      source: 'tc', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+  }
+  return results;
+}
+
+function parseVisaPdf(text) {
+  var results = [];
+  var lines = text.split('\n');
+  var dateRegex = /^(\d{2}\/\d{2}\/\d{4})$/;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!dateRegex.test(line)) continue;
+    var parts = line.split('/').map(Number);
+    var dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (isNaN(dateObj.getTime())) continue;
+
+    // Next lines: card type, description (possibly multi-line), cuotas, amount
+    // Scan ahead to find amount (number with comma as thousands separator)
+    var desc = '', amount = 0, j = i + 1;
+    // Skip card type line (Titular***, Adicional***)
+    if (j < lines.length && /^(Titular|Adicional)/.test(lines[j].trim())) j++;
+    // Collect description lines until we hit cuotas pattern (XX/XX)
+    while (j < lines.length) {
+      var l = lines[j].trim();
+      if (/^\d{2}\/\d{2}$/.test(l)) { j++; break; } // cuotas line
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(l)) break; // next date
+      if (/^-?[\d,]+$/.test(l.replace(/\s/g, ''))) break; // amount
+      desc += (desc ? ' ' : '') + l;
+      j++;
+    }
+    // Next should be amount
+    if (j < lines.length) {
+      var amtStr = lines[j].trim().replace(/\s/g, '');
+      if (/^-?[\d,]+$/.test(amtStr)) {
+        amount = parseInt(amtStr.replace(/,/g, '')) || 0;
+      }
+    }
+    if (!desc || amount === 0) continue;
+    desc = cleanDescVisa(desc);
+    var isPay = amount < 0 || (desc.toLowerCase().indexOf('pago') >= 0 && desc.toLowerCase().indexOf('tef') >= 0);
+    if (isPay) amount = Math.abs(amount);
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount,
+      type: isPay ? 'ingreso' : 'gasto',
+      source: 'tc', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+  }
+  return results;
+}
+
+function cleanDescVisa(desc) {
+  return desc.replace(/\s+/g, ' ').replace(/\s*(COMPRAS?|CL)\s*$/i, '').replace(/\s+/g, ' ').trim();
+}
+
 function cleanDesc(desc) {
   return desc.replace(/\s+/g, ' ')
     .replace(/Rut\s*\d+[\.\-\dkK]+/gi, '')
@@ -342,8 +451,13 @@ async function importFile(file) {
       });
       lineText += line.trim() + '\n';
     }
+    // Try Visa PDF first (Banco de Chile), then CMR
+    var visaPdfParsed = parseVisaPdf(lineText);
+    if (visaPdfParsed.length > 0) {
+      return { results: await addParsedTransactions(visaPdfParsed), source: 'TC Visa' };
+    }
     var parsed = parseCMRPdf(lineText);
-    return { results: await addParsedTransactions(parsed), source: 'PDF' };
+    return { results: await addParsedTransactions(parsed), source: 'TC CMR' };
   } else {
     var ab = await file.arrayBuffer();
     var wb = XLSX.read(ab, { type: 'array' });
@@ -354,6 +468,10 @@ async function importFile(file) {
     var cmrParsed = parseCMRExcel(wb);
     if (cmrParsed.length > 0) {
       return { results: await addParsedTransactions(cmrParsed), source: 'TC CMR' };
+    }
+    var visaParsed = parseVisaExcel(wb);
+    if (visaParsed.length > 0) {
+      return { results: await addParsedTransactions(visaParsed), source: 'TC Visa' };
     }
     return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
   }
