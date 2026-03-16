@@ -638,6 +638,50 @@ async function addParsedTransactions(parsed) {
   return { added: added, dupes: dupes, total: parsed.length };
 }
 
+// Detect bank from file content fingerprints
+function detectBankExcel(workbook) {
+  var sheet = workbook.Sheets[workbook.SheetNames[0]];
+  var raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  var text = raw.slice(0, 30).map(function(r) { return (r || []).join(' '); }).join(' ').toLowerCase();
+  var sheetName = (workbook.SheetNames[0] || '').toLowerCase();
+
+  if (text.indexOf('banco bice') >= 0 || text.indexOf('bice') >= 0) return 'bice';
+  if (text.indexOf('cmr') >= 0 || text.indexOf('falabella') >= 0 || text.indexOf('valor cuota') >= 0) return 'cmr';
+  if (sheetName.indexOf('saldo y mov no facturado') >= 0 || text.indexOf('mov no facturado') >= 0 ||
+      text.indexOf('tipo de tarjeta') >= 0 || text.indexOf('visa signature') >= 0 ||
+      text.indexOf('mastercard') >= 0) return 'visa';
+  if (text.indexOf('banco de chile') >= 0 || text.indexOf('cargos (clp)') >= 0 ||
+      text.indexOf('abonos (clp)') >= 0 || text.indexOf('canal o sucursal') >= 0) return 'bchile';
+  if (text.indexOf('santander') >= 0) return 'santander';
+  if (text.indexOf('scotiabank') >= 0) return 'scotiabank';
+  if (text.indexOf('bci') >= 0 || text.indexOf('banco credito') >= 0) return 'bci';
+  if (text.indexOf('itau') >= 0 || text.indexOf('itaú') >= 0) return 'itau';
+  if (text.indexOf('estado') >= 0 && text.indexOf('banco') >= 0) return 'estado';
+  return 'desconocido';
+}
+
+function detectBankPdf(text) {
+  var t = text.substring(0, 3000).toLowerCase();
+  if (t.indexOf('banco bice') >= 0 || t.indexOf('bice') >= 0) return 'bice';
+  if (t.indexOf('cmr') >= 0 || t.indexOf('falabella') >= 0 || t.indexOf('periodo facturado') >= 0) return 'cmr';
+  if (t.indexOf('mov no facturado') >= 0 || t.indexOf('tipo de tarjeta') >= 0 ||
+      t.indexOf('visa signature') >= 0 || t.indexOf('mastercard') >= 0 ||
+      t.indexOf('cupo disponible') >= 0) return 'visa';
+  if (t.indexOf('banco de chile') >= 0 || t.indexOf('cargos (clp)') >= 0 ||
+      t.indexOf('canal o sucursal') >= 0 || t.indexOf('sbif.cl') >= 0) return 'bchile';
+  if (t.indexOf('santander') >= 0) return 'santander';
+  if (t.indexOf('scotiabank') >= 0) return 'scotiabank';
+  if (t.indexOf('bci') >= 0) return 'bci';
+  return 'desconocido';
+}
+
+var BANK_LABELS = {
+  bice: 'Banco BICE', cmr: 'TC CMR Falabella', visa: 'TC Visa',
+  bchile: 'Banco de Chile', santander: 'Banco Santander',
+  scotiabank: 'Scotiabank', bci: 'BCI', itau: 'Banco Itaú',
+  estado: 'BancoEstado', desconocido: 'Auto-detectado'
+};
+
 async function importFile(file) {
   var name = file.name.toLowerCase();
   var isPdf = name.endsWith('.pdf');
@@ -657,42 +701,45 @@ async function importFile(file) {
       });
       lineText += line.trim() + '\n';
     }
-    // Try each PDF parser in order
-    var bchilePdfParsed = parseBChilePdf(lineText);
-    if (bchilePdfParsed.length > 0) {
-      return { results: await addParsedTransactions(bchilePdfParsed), source: 'Banco de Chile' };
+    var bank = detectBankPdf(lineText);
+    var label = BANK_LABELS[bank] || bank;
+    var parsed = [];
+    if (bank === 'bchile') parsed = parseBChilePdf(lineText);
+    else if (bank === 'visa') parsed = parseVisaPdf(lineText);
+    else if (bank === 'cmr') parsed = parseCMRPdf(lineText);
+    // If specific parser returned nothing or bank unknown, try all
+    if (parsed.length === 0) {
+      parsed = parseBChilePdf(lineText);
+      if (parsed.length > 0 && bank === 'desconocido') label = 'Cuenta Corriente';
     }
-    var visaPdfParsed = parseVisaPdf(lineText);
-    if (visaPdfParsed.length > 0) {
-      return { results: await addParsedTransactions(visaPdfParsed), source: 'TC Visa' };
+    if (parsed.length === 0) {
+      parsed = parseVisaPdf(lineText);
+      if (parsed.length > 0 && bank === 'desconocido') label = 'Tarjeta Credito';
     }
-    var parsed = parseCMRPdf(lineText);
-    return { results: await addParsedTransactions(parsed), source: 'TC CMR' };
+    if (parsed.length === 0) {
+      parsed = parseCMRPdf(lineText);
+      if (parsed.length > 0 && bank === 'desconocido') label = 'Tarjeta Credito';
+    }
+    return { results: await addParsedTransactions(parsed), source: label };
   } else {
     var ab = await file.arrayBuffer();
     var wb = XLSX.read(ab, { type: 'array' });
-    var biceParsed = parseBICE(wb);
-    if (biceParsed.length > 0) {
-      return { results: await addParsedTransactions(biceParsed), source: 'Banco BICE' };
-    }
-    var cmrParsed = parseCMRExcel(wb);
-    if (cmrParsed.length > 0) {
-      return { results: await addParsedTransactions(cmrParsed), source: 'TC CMR' };
-    }
-    var visaParsed = parseVisaExcel(wb);
-    if (visaParsed.length > 0) {
-      return { results: await addParsedTransactions(visaParsed), source: 'TC Visa' };
-    }
-    var bchileParsed = parseBChileExcel(wb);
-    if (bchileParsed.length > 0) {
-      return { results: await addParsedTransactions(bchileParsed), source: 'Banco de Chile' };
-    }
-    // Fallback: try generic parser for any Excel with Fecha/Descripcion/Monto columns
-    var genericParsed = parseGenericExcel(wb);
-    if (genericParsed.length > 0) {
-      return { results: await addParsedTransactions(genericParsed), source: 'Auto-detectado' };
-    }
-    return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
+    var bank = detectBankExcel(wb);
+    var label = BANK_LABELS[bank] || bank;
+    var parsed = [];
+    // Route to specific parser based on detected bank
+    if (bank === 'bice') parsed = parseBICE(wb);
+    else if (bank === 'cmr') parsed = parseCMRExcel(wb);
+    else if (bank === 'visa') parsed = parseVisaExcel(wb);
+    else if (bank === 'bchile') parsed = parseBChileExcel(wb);
+    // If specific parser returned nothing or bank not recognized, try all
+    if (parsed.length === 0) { parsed = parseBICE(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Banco' : label; }
+    if (parsed.length === 0) { parsed = parseBChileExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Cuenta Corriente' : label; }
+    if (parsed.length === 0) { parsed = parseVisaExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Tarjeta Credito' : label; }
+    if (parsed.length === 0) { parsed = parseCMRExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Tarjeta Credito' : label; }
+    if (parsed.length === 0) { parsed = parseGenericExcel(wb); if (parsed.length > 0) label = label === 'Auto-detectado' ? 'Auto-detectado' : label; }
+    if (parsed.length === 0) return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
+    return { results: await addParsedTransactions(parsed), source: label };
   }
 }
 
