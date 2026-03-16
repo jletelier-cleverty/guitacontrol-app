@@ -343,17 +343,17 @@ async function importFile(file) {
       lineText += line.trim() + '\n';
     }
     var parsed = parseCMRPdf(lineText);
-    return { results: addParsedTransactions(parsed), source: 'PDF' };
+    return { results: await addParsedTransactions(parsed), source: 'PDF' };
   } else {
     var ab = await file.arrayBuffer();
     var wb = XLSX.read(ab, { type: 'array' });
     var biceParsed = parseBICE(wb);
     if (biceParsed.length > 0) {
-      return { results: addParsedTransactions(biceParsed), source: 'Banco BICE' };
+      return { results: await addParsedTransactions(biceParsed), source: 'Banco BICE' };
     }
     var cmrParsed = parseCMRExcel(wb);
     if (cmrParsed.length > 0) {
-      return { results: addParsedTransactions(cmrParsed), source: 'TC CMR' };
+      return { results: await addParsedTransactions(cmrParsed), source: 'TC CMR' };
     }
     return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
   }
