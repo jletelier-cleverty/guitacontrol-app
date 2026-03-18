@@ -83,7 +83,8 @@ function renderDeudas() {
   }).join('');
 }
 
-document.getElementById('addDebtBtn').addEventListener('click', function() { showDebtModal(); });
+var _addDebtBtn = document.getElementById('addDebtBtn');
+if (_addDebtBtn) _addDebtBtn.addEventListener('click', function() { showDebtModal(); });
 
 function showDebtModal(existing) {
   var isEdit = !!existing;

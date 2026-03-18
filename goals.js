@@ -2,7 +2,7 @@
    GOALS — Metas financieras
    ============================================ */
 
-function saveGoalsLocal() { localStorage.setItem(GOALS_LOCAL_KEY, JSON.stringify(goals)); }
+function saveGoalsLocal() { /* migrated to Supabase — saveGoalDB handles persistence */ }
 
 var GOAL_CATEGORY_CONFIG = {
   emergencia: { icon:'🛡️', label:'Fondo de emergencia', hint:'Se recomienda tener 3-6 meses de gastos. Si gastas $1.5M/mes, apunta a $4.5M-$9M.' },
@@ -38,8 +38,10 @@ window.updateGoalForm = function() {
   }
 };
 
-document.getElementById('goalTradeIn').addEventListener('input', updateNetTarget);
-document.getElementById('goalTarget').addEventListener('input', updateNetTarget);
+var _goalTradeIn = document.getElementById('goalTradeIn');
+var _goalTarget = document.getElementById('goalTarget');
+if (_goalTradeIn) _goalTradeIn.addEventListener('input', updateNetTarget);
+if (_goalTarget) _goalTarget.addEventListener('input', updateNetTarget);
 
 function updateNetTarget() {
   var target = parseInt(document.getElementById('goalTarget').value) || 0;
@@ -96,7 +98,8 @@ window.editGoal = function(id) {
   document.getElementById('goalModal').classList.add('open');
 };
 
-document.getElementById('addGoalBtn').addEventListener('click', function() {
+var _addGoalBtn = document.getElementById('addGoalBtn');
+if (_addGoalBtn) _addGoalBtn.addEventListener('click', function() {
   editingGoalId = null;
   document.getElementById('goalModalTitle').textContent = 'Nueva Meta';
   document.getElementById('goalCategory').value = 'emergencia'; updateGoalForm();
@@ -109,23 +112,26 @@ document.getElementById('addGoalBtn').addEventListener('click', function() {
   document.getElementById('goalModal').classList.add('open');
 });
 
-document.getElementById('goalModalCancel').addEventListener('click', function() { document.getElementById('goalModal').classList.remove('open'); });
+var _goalModalCancel = document.getElementById('goalModalCancel');
+if (_goalModalCancel) _goalModalCancel.addEventListener('click', function() { document.getElementById('goalModal').classList.remove('open'); });
 
-document.getElementById('goalModalDelete').addEventListener('click', function() {
+var _goalModalDelete = document.getElementById('goalModalDelete');
+if (_goalModalDelete) _goalModalDelete.addEventListener('click', function() {
   if (editingGoalId && confirm('Eliminar esta meta?')) {
     goals = goals.filter(function(g) { return g.id !== editingGoalId; });
-    saveGoalsLocal(); document.getElementById('goalModal').classList.remove('open'); renderMetas();
+    deleteGoalDB(editingGoalId); document.getElementById('goalModal').classList.remove('open'); renderMetas();
   }
 });
 
-document.getElementById('goalModalSave').addEventListener('click', function() {
+var _goalModalSave = document.getElementById('goalModalSave');
+if (_goalModalSave) _goalModalSave.addEventListener('click', function() {
   var name = document.getElementById('goalName').value.trim(); if (!name) return;
   var tradeIn = parseInt(document.getElementById('goalTradeIn').value) || 0;
   var rawTarget = parseInt(document.getElementById('goalTarget').value) || 0;
   var effectiveTarget = tradeIn > 0 ? Math.max(0, rawTarget - tradeIn) : rawTarget;
   var data = { id: editingGoalId || gid(), name:name, category:document.getElementById('goalCategory').value, target:effectiveTarget, rawTarget:rawTarget, tradeIn:tradeIn, term:document.getElementById('goalTerm').value, date:document.getElementById('goalDate').value, monthly:parseInt(document.getElementById('goalMonthly').value)||0, priority:document.getElementById('goalPriority').value, notes:document.getElementById('goalNotes').value.trim(), saved:0, createdAt:Date.now() };
   if (editingGoalId) { var idx = goals.findIndex(function(g) { return g.id === editingGoalId; }); if (idx >= 0) { data.saved = goals[idx].saved || 0; data.createdAt = goals[idx].createdAt || Date.now(); goals[idx] = data; } } else { goals.push(data); }
-  saveGoalsLocal(); document.getElementById('goalModal').classList.remove('open'); renderMetas();
+  saveGoalDB(data); document.getElementById('goalModal').classList.remove('open'); renderMetas();
 });
 
 var motivationalQuotes = [
@@ -140,8 +146,10 @@ var motivationalQuotes = [
 ];
 
 function renderMetas() {
+  var listEl = document.getElementById('goalsList');
+  if (!listEl) return;
   var filtered = getFilteredGoals();
-  var listEl = document.getElementById('goalsList'), emptyEl = document.getElementById('goalsEmpty');
+  var emptyEl = document.getElementById('goalsEmpty');
   var totalTarget = goals.reduce(function(s,g){return s+(g.target||0);},0);
   var totalMonthly = goals.reduce(function(s,g){return s+(g.monthly||0);},0);
 

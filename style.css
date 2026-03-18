@@ -26,6 +26,8 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Force emoji text rendering to avoid system image fallbacks */
+body { font-variant-emoji: text; }
 img, canvas, svg, video { max-width: 100%; height: auto; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
 .app { display: flex; min-height: 100vh; }
@@ -1282,3 +1284,23 @@ body.demo-mode .sidebar { top: 42px; height: calc(100vh - 42px); }
 .toast-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
 .toast-icon { font-size: 1rem; }
 @media (max-width: 700px) { #toasts { bottom: 12px; right: 12px; left: 12px; } .toast { max-width: 100%; } }
+
+/* ---- UNCATEGORIZED BANNER ---- */
+.uncat-banner { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--yellow-bg); border: 1px solid #fde68a; border-radius: var(--radius-sm); }
+.uncat-banner-icon { font-size: 1.5rem; }
+.uncat-banner-text { display: flex; flex-direction: column; }
+.uncat-banner-text strong { font-size: 1.1rem; color: var(--yellow); }
+.uncat-banner-sub { font-size: 0.78rem; color: var(--text-secondary); }
+
+/* ---- BANK INTEGRATIONS GRID ---- */
+.bank-integrations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.bank-integration-item { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); transition: all 0.2s; cursor: default; }
+.bank-integration-item.available { border-color: var(--green); background: var(--green-bg); cursor: pointer; }
+.bank-integration-item.available:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.bank-integration-item.coming-soon { opacity: 0.6; }
+.bank-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 8px; }
+.bank-logo-box { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; font-family: var(--font); text-align: center; letter-spacing: -0.02em; flex-shrink: 0; }
+.bank-name { font-size: 0.82rem; font-weight: 600; color: var(--text); text-align: center; }
+.bank-status { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: var(--bg); color: var(--text-secondary); font-weight: 500; }
+.bank-status.available { background: var(--green); color: #fff; }
+@media (max-width: 700px) { .bank-integrations-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; } .bank-integration-item { padding: 12px 8px; } .bank-logo { width: 36px; height: 36px; } .bank-name { font-size: 0.72rem; } }

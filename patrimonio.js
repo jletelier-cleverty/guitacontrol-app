@@ -144,6 +144,7 @@ function renderPatrimonio() {
   }
 
   renderAccounts();
+  renderCompanies();
 
   var totalValueUF = properties.reduce(function(s, p) { return s + p.currentValue; }, 0);
   var totalDebtUF = properties.reduce(function(s, p) { return s + (p.debt || 0); }, 0);
@@ -151,7 +152,8 @@ function renderPatrimonio() {
   var totalEquityCLP = ufToCLP(totalEquityUF);
   var totalAhorro = getTotalSavings();
   var totalLiquidez = getTotalAccounts();
-  var patrimonio = totalEquityCLP + Math.max(0, totalAhorro) + totalLiquidez;
+  var totalCompanies = getTotalCompanies();
+  var patrimonio = totalEquityCLP + Math.max(0, totalAhorro) + totalLiquidez + totalCompanies;
 
   document.getElementById('patPropTotal').textContent = fmt(totalEquityCLP);
   document.getElementById('patPropUF').textContent = fmtUF(totalEquityUF) + ' (valor ' + fmtUF(totalValueUF) + ' - deuda ' + fmtUF(totalDebtUF) + ')';
@@ -304,7 +306,7 @@ function renderProjection(currentNet, fireNumber) {
 }
 
 // ---- ACCOUNTS / LIQUIDEZ ----
-function saveAccounts() { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts)); }
+function saveAccounts() { if (typeof saveAccountDB === 'function') { /* saved per-item via saveAccountDB */ } }
 function getTotalAccounts() { return accounts.reduce(function(s, a) { return s + (a.balance || 0); }, 0); }
 function getAccountIcon(type) {
   var icons = { cuenta_corriente:'💳', cuenta_ahorro:'🏦', deposito_plazo:'🔒', fondo_mutuo:'📈', apv:'🎯', etf:'📊', cripto:'₿', efectivo:'💵', otro:'📁' };
@@ -352,7 +354,7 @@ document.getElementById('accModalCancel').addEventListener('click', function() {
 document.getElementById('accModalDelete').addEventListener('click', function() {
   if (editingAccId && confirm('Eliminar esta cuenta?')) {
     accounts = accounts.filter(function(a) { return a.id !== editingAccId; });
-    saveAccounts(); document.getElementById('accountModal').classList.remove('open'); renderPatrimonio();
+    deleteAccountDB(editingAccId); document.getElementById('accountModal').classList.remove('open'); renderPatrimonio();
   }
 });
 document.getElementById('accModalSave').addEventListener('click', function() {
@@ -362,7 +364,7 @@ document.getElementById('accModalSave').addEventListener('click', function() {
   var balEl = document.getElementById('accBalance'), instEl = document.getElementById('accInstitution'), retEl = document.getElementById('accReturn'), notesEl = document.getElementById('accNotes');
   var data = { id: editingAccId || gid(), name: name, type: document.getElementById('accType').value, balance: parseInt(balEl ? balEl.value : 0) || 0, institution: instEl ? instEl.value.trim() : '', returnRate: parseFloat(retEl ? retEl.value : 0) || 0, notes: notesEl ? notesEl.value.trim() : '' };
   if (editingAccId) { var idx = accounts.findIndex(function(a) { return a.id === editingAccId; }); if (idx >= 0) accounts[idx] = data; } else { accounts.push(data); }
-  saveAccounts(); document.getElementById('accountModal').classList.remove('open'); renderPatrimonio();
+  saveAccountDB(data); document.getElementById('accountModal').classList.remove('open'); renderPatrimonio();
 });
 window.editAccount = function(id) {
   var a = accounts.find(function(x) { return x.id === id; });
@@ -376,6 +378,95 @@ window.editAccount = function(id) {
   document.getElementById('accModalDelete').style.display = '';
   document.getElementById('accountModal').classList.add('open');
 };
+// ---- COMPANIES / EMPRESAS ----
+function getTotalCompanies() {
+  return companies.reduce(function(s, c) { return s + Math.round((c.value || 0) * (c.pct || 0) / 100); }, 0);
+}
+
+function renderCompanies() {
+  var listEl = document.getElementById('companiesList');
+  var emptyEl = document.getElementById('companiesEmpty');
+  var totalBar = document.getElementById('companiesTotalBar');
+  if (!listEl) return;
+  if (companies.length === 0) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = '';
+    totalBar.style.display = 'none';
+    emptyEl.innerHTML = '<div class="empty-state-enhanced"><div class="empty-icon">🏢</div><div class="empty-msg">Registra tu participacion en empresas o sociedades<br>para incluirlas en tu patrimonio total.</div><button class="btn btn-primary" onclick="document.getElementById(\'addCompanyBtn\').click()">Agregar empresa →</button></div>';
+  } else {
+    emptyEl.style.display = 'none';
+    totalBar.style.display = '';
+    listEl.innerHTML = companies.map(function(c) {
+      var myValue = Math.round((c.value || 0) * (c.pct || 0) / 100);
+      return '<div class="property-card" onclick="editCompany(\'' + c.id + '\')">' +
+        '<span class="property-icon">🏢</span>' +
+        '<div class="property-info"><span class="property-name">' + c.name + '</span>' +
+        '<span class="property-meta">Valor empresa: ' + fmt(c.value) + ' · ' + c.pct + '% participacion' + (c.notes ? ' · ' + c.notes : '') + '</span></div>' +
+        '<div class="property-value"><span class="property-value-main amount-positive">' + fmt(myValue) + '</span>' +
+        '<span class="property-value-gain" style="color:var(--text-secondary);font-size:0.72rem">Tu parte</span></div></div>';
+    }).join('');
+    document.getElementById('companiesTotalValue').textContent = fmt(getTotalCompanies());
+  }
+}
+
+document.getElementById('addCompanyBtn').addEventListener('click', function() {
+  editingCompanyId = null;
+  document.getElementById('companyModalTitle').textContent = 'Agregar Empresa';
+  document.getElementById('companyName').value = '';
+  document.getElementById('companyValue').value = '';
+  document.getElementById('companyPct').value = '';
+  document.getElementById('companyNotes').value = '';
+  document.getElementById('companyModalDelete').style.display = 'none';
+  document.getElementById('companyModal').classList.add('open');
+});
+
+document.getElementById('companyModalCancel').addEventListener('click', function() {
+  document.getElementById('companyModal').classList.remove('open');
+});
+
+document.getElementById('companyModalDelete').addEventListener('click', async function() {
+  if (editingCompanyId && confirm('Eliminar esta empresa?')) {
+    companies = companies.filter(function(c) { return c.id !== editingCompanyId; });
+    await deleteCompanyDB(editingCompanyId);
+    document.getElementById('companyModal').classList.remove('open');
+    renderPatrimonio();
+  }
+});
+
+document.getElementById('companyModalSave').addEventListener('click', async function() {
+  var name = document.getElementById('companyName').value.trim();
+  if (!name) return;
+  var data = {
+    id: editingCompanyId || gid(),
+    name: name,
+    value: parseInt(document.getElementById('companyValue').value) || 0,
+    pct: parseFloat(document.getElementById('companyPct').value) || 0,
+    notes: document.getElementById('companyNotes').value.trim()
+  };
+  if (editingCompanyId) {
+    var idx = companies.findIndex(function(c) { return c.id === editingCompanyId; });
+    if (idx >= 0) companies[idx] = data;
+  } else {
+    companies.push(data);
+  }
+  await saveCompanyDB(data);
+  document.getElementById('companyModal').classList.remove('open');
+  renderPatrimonio();
+});
+
+window.editCompany = function(id) {
+  var c = companies.find(function(x) { return x.id === id; });
+  if (!c) return;
+  editingCompanyId = id;
+  document.getElementById('companyModalTitle').textContent = 'Editar Empresa';
+  document.getElementById('companyName').value = c.name;
+  document.getElementById('companyValue').value = c.value;
+  document.getElementById('companyPct').value = c.pct;
+  document.getElementById('companyNotes').value = c.notes || '';
+  document.getElementById('companyModalDelete').style.display = '';
+  document.getElementById('companyModal').classList.add('open');
+};
+
 function renderAccounts() {
   var listEl = document.getElementById('accountsList'), emptyEl = document.getElementById('accountsEmpty'), totalBar = document.getElementById('accountsTotalBar');
   if (accounts.length === 0) { listEl.innerHTML = ''; emptyEl.style.display = ''; totalBar.style.display = 'none'; emptyEl.innerHTML = '<div class="empty-state-enhanced"><div class="empty-icon">💰</div><div class="empty-msg">Registra tus cuentas de ahorro, fondos mutuos y liquidez<br>para ver tu patrimonio completo.</div><button class="btn btn-primary" onclick="document.getElementById(\'addAccountBtn\').click()">Agregar cuenta →</button></div>'; }

@@ -3,17 +3,12 @@
    ============================================ */
 
 var navTitles = {
-  dashboard:['Dashboard','Resumen de tus finanzas'],
-  metas:['Metas','Tus objetivos financieros'],
-  transacciones:['Transacciones','Detalle de movimientos'],
-  categorias:['Categorias','Reglas y conciliacion'],
   importar:['Importar','Sube cartolas y estados de cuenta'],
-  revisar:['Revisar','Corrige categorias mal asignadas'],
+  transacciones:['Transacciones','Detalle de movimientos'],
   patrimonio:['Patrimonio','Inversiones, ahorro y proyeccion'],
-  ajustes:['Ajustes','Configuracion y parametros'],
-  deudas:['Deudas','Control de deudas y prestamos'],
+  dashboard:['Dashboard','Resumen de tus finanzas'],
   estrategia:['Mi Estrategia','Perfil de inversionista y portafolio sugerido'],
-  inversiones:['Inversiones','Top instrumentos por categoría y rendimiento']
+  ajustes:['Ajustes','Configuracion, reglas y categorizacion']
 };
 
 function switchView(view) {
@@ -27,7 +22,6 @@ function switchView(view) {
   document.getElementById('viewTitle').textContent = t[0];
   document.getElementById('viewSubtitle').textContent = t[1];
   if (view === 'estrategia' && typeof checkSavedInvestorProfile === 'function') checkSavedInvestorProfile();
-  if (view === 'inversiones' && typeof renderInversiones === 'function') renderInversiones();
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('mobileOverlay').classList.remove('open');
 }

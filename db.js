@@ -46,7 +46,8 @@ async function loadProfile() {
       savingsGoal: res.data.savings_goal || 500000,
       returnRate: parseFloat(res.data.return_rate) || 8,
       uf: parseFloat(res.data.uf) || 38800,
-      country: res.data.country || 'CL'
+      country: res.data.country || 'CL',
+      onboardingDone: res.data.onboarding_done || false
     };
   }
 }
@@ -187,22 +188,34 @@ async function deleteProperty(id) {
 // ---- GOALS ----
 async function loadGoals() {
   if (window.DEMO_MODE) return;
-  var { data } = await sb.from('goals').select('*').eq('user_id', currentUser.id).order('slot');
-  goals = [{}, {}, {}];
-  if (data) {
-    data.forEach(function(g) {
-      goals[g.slot] = { title: g.title || '', value: g.value || 0, image: g.image_url || '' };
-    });
-  }
+  var { data } = await sb.from('goals_v2').select('*').eq('user_id', currentUser.id).order('created_at');
+  goals = (data || []).map(function(g) {
+    return {
+      id: g.id, name: g.name, category: g.category || 'otro',
+      target: g.target || 0, rawTarget: g.raw_target || 0,
+      tradeIn: g.trade_in || 0, term: g.term || 'mediano',
+      date: g.target_date || '', monthly: g.monthly || 0,
+      priority: g.priority || 'media', notes: g.notes || '',
+      saved: g.saved || 0, createdAt: new Date(g.created_at).getTime()
+    };
+  });
 }
 
-async function saveGoalDB(slot) {
-  var g = goals[slot] || {};
-  await sb.from('goals').upsert({
-    user_id: currentUser.id, slot: slot,
-    title: g.title || '', value: g.value || 0,
-    image_url: g.image || ''
-  }, { onConflict: 'user_id,slot' });
+async function saveGoalDB(goal) {
+  if (window.DEMO_MODE) return;
+  await sb.from('goals_v2').upsert({
+    id: goal.id, user_id: currentUser.id, name: goal.name,
+    category: goal.category || 'otro', target: goal.target || 0,
+    raw_target: goal.rawTarget || 0, trade_in: goal.tradeIn || 0,
+    term: goal.term || 'mediano', target_date: goal.date || '',
+    monthly: goal.monthly || 0, priority: goal.priority || 'media',
+    notes: goal.notes || '', saved: goal.saved || 0
+  }, { onConflict: 'id' });
+}
+
+async function deleteGoalDB(id) {
+  if (window.DEMO_MODE) return;
+  await sb.from('goals_v2').delete().eq('id', id);
 }
 
 // ---- DEBTS ----
@@ -230,6 +243,91 @@ async function deleteDebtDB(id) {
   await sb.from('debts').delete().eq('id', id);
 }
 
+// ---- ACCOUNTS ----
+async function loadAccounts() {
+  if (window.DEMO_MODE) return;
+  var { data } = await sb.from('accounts').select('*').eq('user_id', currentUser.id);
+  accounts = (data || []).map(function(a) {
+    return {
+      id: a.id, name: a.name, type: a.type,
+      balance: a.balance || 0, institution: a.institution || '',
+      returnRate: parseFloat(a.return_rate) || 0, notes: a.notes || ''
+    };
+  });
+}
+
+async function saveAccountDB(a) {
+  if (window.DEMO_MODE) return;
+  await sb.from('accounts').upsert({
+    id: a.id, user_id: currentUser.id, name: a.name, type: a.type,
+    balance: a.balance || 0, institution: a.institution || '',
+    return_rate: a.returnRate || 0, notes: a.notes || ''
+  }, { onConflict: 'id' });
+}
+
+async function deleteAccountDB(id) {
+  if (window.DEMO_MODE) return;
+  await sb.from('accounts').delete().eq('id', id);
+}
+
+// ---- COMPANIES ----
+async function loadCompanies() {
+  if (window.DEMO_MODE) return;
+  var { data } = await sb.from('companies').select('*').eq('user_id', currentUser.id);
+  companies = (data || []).map(function(c) {
+    return {
+      id: c.id, name: c.name, value: c.value || 0,
+      pct: parseFloat(c.pct) || 0, notes: c.notes || ''
+    };
+  });
+}
+
+async function saveCompanyDB(c) {
+  if (window.DEMO_MODE) return;
+  await sb.from('companies').upsert({
+    id: c.id, user_id: currentUser.id, name: c.name,
+    value: c.value || 0, pct: c.pct || 0, notes: c.notes || ''
+  }, { onConflict: 'id' });
+}
+
+async function deleteCompanyDB(id) {
+  if (window.DEMO_MODE) return;
+  await sb.from('companies').delete().eq('id', id);
+}
+
+// ---- INVESTOR PROFILE (stored in profiles table) ----
+async function saveInvestorProfileDB(profileType, answers) {
+  if (window.DEMO_MODE) return;
+  await sb.from('profiles').update({
+    investor_profile: profileType,
+    investor_answers: answers || {}
+  }).eq('id', currentUser.id);
+}
+
+async function loadInvestorProfileDB() {
+  if (window.DEMO_MODE) return null;
+  var { data } = await sb.from('profiles').select('investor_profile, investor_answers').eq('id', currentUser.id).single();
+  if (data && data.investor_profile) {
+    return { profile: data.investor_profile, answers: data.investor_answers || {} };
+  }
+  return null;
+}
+
+// ---- ONBOARDING (stored in profiles table) ----
+async function saveOnboardingDB(objectives) {
+  if (window.DEMO_MODE) return;
+  await sb.from('profiles').update({
+    onboarding_done: true,
+    user_objectives: objectives || []
+  }).eq('id', currentUser.id);
+}
+
+async function loadOnboardingDB() {
+  if (window.DEMO_MODE) return null;
+  var { data } = await sb.from('profiles').select('onboarding_done, user_objectives').eq('id', currentUser.id).single();
+  return data;
+}
+
 // ---- INIT ----
 async function initApp() {
   var user = await checkAuth();
@@ -242,7 +340,7 @@ async function initApp() {
   if (emailEl) emailEl.textContent = currentUser.email;
 
   // Load all data
-  await Promise.all([loadProfile(), loadTransactions(), loadRules(), loadProperties(), loadGoals(), loadDebts()]);
+  await Promise.all([loadProfile(), loadTransactions(), loadRules(), loadProperties(), loadAccounts(), loadCompanies()]);
 
   // Demo mode: load fake data
   if (window.DEMO_MODE && typeof loadDemoData === 'function') {

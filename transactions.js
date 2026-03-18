@@ -43,9 +43,10 @@ function renderTransactions() {
   }).join('');
 }
 
-// ---- REVISAR ----
+// ---- REVISAR (legacy, kept for compatibility) ----
 function renderRevisar() {
   var container = document.getElementById('revisarList');
+  if (!container) return;
   var cats = {};
   transactions.filter(isVisible).forEach(function(t) {
     var c = t.category || 'Sin Categorizar';

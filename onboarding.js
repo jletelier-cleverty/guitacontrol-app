@@ -4,7 +4,7 @@
 
 function checkOnboarding() {
   if (window.DEMO_MODE) return false;
-  if (localStorage.getItem('onboarding_done')) return false;
+  if (profile.onboardingDone || localStorage.getItem('onboarding_done')) return false;
   if (profile.age === 30 && profile.monthlySpend === 1500000 && transactions.length === 0) {
     showOnboarding();
     return true;
@@ -68,11 +68,12 @@ async function obFinish() {
   var manualSpend = parseInt(document.getElementById('obSpendManual').value);
   profile.monthlySpend = manualSpend > 0 ? manualSpend : (parseInt(document.getElementById('obSpend').value) || 1500000);
   profile.country = document.getElementById('obCountry').value;
-  await saveProfileDB();
-  localStorage.setItem('onboarding_done', '1');
   var objectives = [];
   document.querySelectorAll('.ob-goal-item input:checked').forEach(function(cb) { objectives.push(cb.value); });
-  localStorage.setItem('user_objectives', JSON.stringify(objectives));
+  profile.onboardingDone = true;
+  await saveProfileDB();
+  await saveOnboardingDB(objectives);
+  localStorage.setItem('onboarding_done', '1');
   document.getElementById('onboardingWizard').style.display = 'none';
   refreshAll();
 }
@@ -86,16 +87,16 @@ function renderChecklist() {
   if (!card || localStorage.getItem('checklist_dismissed')) { if (card) card.style.display = 'none'; return; }
 
   var items = [
-    { text: 'Completar tu perfil', done: profile.age !== 30 || profile.monthlySpend !== 1500000, view: 'ajustes', icon: '👤' },
     { text: 'Importar tu primera cartola', done: transactions.length > 0, view: 'importar', icon: '📄' },
-    { text: 'Categorizar tus gastos', done: transactions.length > 0 && transactions.filter(function(t) { return t.type === 'gasto' && !t.category; }).length === 0, view: 'revisar', icon: '🏷️' },
+    { text: 'Categorizar tus gastos', done: transactions.length > 0 && transactions.filter(function(t) { return t.type === 'gasto' && !t.category; }).length === 0, view: 'categorias', icon: '🏷️' },
     { text: 'Agregar patrimonio', done: (typeof properties !== 'undefined' && properties.length > 0) || (typeof accounts !== 'undefined' && accounts.length > 0), view: 'patrimonio', icon: '🏠' },
-    { text: 'Definir tu primera meta', done: (typeof goals !== 'undefined' && goals.length > 0), view: 'metas', icon: '🎯' }
+    { text: 'Completar tu perfil', done: profile.age !== 30 || profile.monthlySpend !== 1500000, view: 'ajustes', icon: '👤' }
   ];
 
   var completed = items.filter(function(i) { return i.done; }).length;
+  var totalItems = items.length;
 
-  if (completed === 5) {
+  if (completed === totalItems) {
     if (!localStorage.getItem('checklist_all_done_date')) {
       localStorage.setItem('checklist_all_done_date', Date.now().toString());
     }
@@ -107,9 +108,9 @@ function renderChecklist() {
     localStorage.removeItem('checklist_all_done_date');
   }
 
-  var pct = (completed / 5) * 100;
+  var pct = (completed / totalItems) * 100;
   card.style.display = '';
-  card.innerHTML = '<h3>🚀 Tu progreso (' + completed + '/5)</h3>' +
+  card.innerHTML = '<h3>🚀 Tu progreso (' + completed + '/' + totalItems + ')</h3>' +
     '<div class="checklist-progress"><div class="checklist-progress-fill" style="width:' + pct + '%"></div></div>' +
     items.map(function(item) {
       return '<div class="checklist-item' + (item.done ? ' done' : '') + '">' +

@@ -76,8 +76,7 @@ function tfResetQuiz() {
   tfUpdateView();
   document.getElementById('estrategiaQuiz').style.display = '';
   document.getElementById('estrategiaResult').style.display = 'none';
-  localStorage.removeItem('investor_profile');
-  localStorage.removeItem('investor_answers');
+  saveInvestorProfileDB('', {});
 }
 
 // ---- INVESTOR PROFILES ----
@@ -545,8 +544,7 @@ function renderEstrategia(profileType, customProfile, inmoInterest, intlInterest
   document.getElementById('estrategiaQuiz').style.display = 'none';
   document.getElementById('estrategiaResult').style.display = '';
 
-  localStorage.setItem('investor_profile', profileType);
-  localStorage.setItem('investor_answers', JSON.stringify(tfAnswers));
+  saveInvestorProfileDB(profileType, tfAnswers);
 }
 
 // Redo quiz
@@ -555,15 +553,14 @@ document.getElementById('quizRedo').addEventListener('click', function() {
 });
 
 // Restore saved profile on load
-function checkSavedInvestorProfile() {
-  var saved = localStorage.getItem('investor_profile');
-  var savedAnswers = localStorage.getItem('investor_answers');
-  if (saved && INVESTOR_PROFILES[saved]) {
-    if (savedAnswers) {
-      tfAnswers = JSON.parse(savedAnswers);
+async function checkSavedInvestorProfile() {
+  var result = await loadInvestorProfileDB();
+  if (result && result.profile && INVESTOR_PROFILES[result.profile]) {
+    if (result.answers && Object.keys(result.answers).length > 0) {
+      tfAnswers = result.answers;
       tfShowResults();
     } else {
-      renderEstrategia(saved);
+      renderEstrategia(result.profile);
     }
   }
 }
@@ -571,8 +568,9 @@ function checkSavedInvestorProfile() {
 // ---- INVERSIONES VIEW ----
 
 function renderInversiones() {
-  var ci = getCountryInstruments();
   var container = document.getElementById('invContent');
+  if (!container) return;
+  var ci = getCountryInstruments();
   var periodKey = 'return' + invCurrentPeriod;
   var periodLabel = invCurrentPeriod === '1y' ? '\u00daltimo a\u00f1o' : invCurrentPeriod === '6m' ? '\u00daltimos 6 meses' : '\u00daltimo mes';
 
@@ -736,6 +734,7 @@ document.querySelectorAll('.inv-time').forEach(function(tab) {
 // ---- WINDFALL ADVISOR ----
 
 function openWindfall() {
+  if (!document.getElementById('windfallModal')) return;
   document.getElementById('wfStep1').style.display = '';
   document.getElementById('wfStep2').style.display = 'none';
   document.getElementById('wfStep3').style.display = 'none';

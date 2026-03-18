@@ -156,7 +156,8 @@ function renderDashboard() {
     return c && c.indexOf('Prestamos') === 0;
   });
   var loansContainer = document.getElementById('loansSection');
-  if (loanCats.length > 0) {
+  if (!loansContainer) { /* removed section */ }
+  else if (loanCats.length > 0) {
     loansContainer.innerHTML = loanCats.map(function(cat) {
       var loanTxs = transactions.filter(function(t) { return t.category === cat; });
       var cobros = loanTxs.filter(function(t) { return t.type === 'gasto'; });

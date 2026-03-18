@@ -186,11 +186,8 @@ if (!window.DEMO_MODE) {
       'view-transacciones': { m: 'GuitaControl reconoce el <strong>85% de tus gastos</strong> automáticamente.', b: 'Importar mi cartola →' },
       'view-importar': { m: '<strong>Crea tu cuenta gratis</strong> para importar tus cartolas del banco.', b: 'Crear cuenta gratis' },
       'view-patrimonio': { m: 'Agrega tus propiedades e inversiones reales.', b: 'Crear cuenta gratis' },
-      'view-metas': { m: 'Define tus propias metas financieras.', b: 'Crear cuenta gratis' },
       'view-estrategia': { m: 'Tu estrategia de inversión personalizada te espera.', b: 'Crear cuenta gratis' },
       'view-ajustes': { m: 'Configura tu perfil real.', b: 'Crear cuenta gratis' },
-      'view-deudas': { m: 'Registra tus deudas reales.', b: 'Crear cuenta gratis' },
-      'view-revisar': { m: 'Revisa las categorías de tus gastos reales.', b: 'Crear cuenta gratis' },
       'view-categorias': { m: 'Tus reglas se crean automáticamente al categorizar.', b: 'Crear cuenta gratis' }
     };
     Object.keys(ctas).forEach(function(vid) {

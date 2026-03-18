@@ -312,15 +312,21 @@ function renderRules() {
 
   var uncat = transactions.filter(function(t) { return !t.category; });
   var uncatDiv = document.getElementById('uncategorized');
+  var uncatBanner = document.getElementById('uncatBanner');
   if (uncat.length === 0) {
-    uncatDiv.innerHTML = '<p style="color:var(--text-secondary);font-size:0.88rem">Todas categorizadas.</p>';
+    if (uncatBanner) uncatBanner.style.display = 'none';
+    if (uncatDiv) uncatDiv.innerHTML = '<p style="color:var(--green);font-size:0.88rem;font-weight:500">✅ Todas las transacciones estan categorizadas.</p>';
   } else {
-    uncatDiv.innerHTML = uncat.slice(0, 15).map(function(t) {
-      return '<div class="rule-item" style="justify-content:space-between">' +
-        '<span style="font-size:0.85rem">' + t.date + ' &mdash; ' + trunc(t.description, 40) + '</span>' +
-        '<span style="font-weight:600">' + fmt(t.amount) + '</span>' +
-        '<span class="cat-pill uncategorized" onclick="openCatModal(\'' + t.id + '\')" style="cursor:pointer">Categorizar</span></div>';
-    }).join('');
+    if (uncatBanner) {
+      uncatBanner.style.display = 'flex';
+      document.getElementById('uncatBannerCount').textContent = uncat.length;
+    }
+    if (uncatDiv) uncatDiv.innerHTML = uncat.slice(0, 30).map(function(t) {
+      return '<div class="rule-item" style="justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:0.85rem;flex:1">' + t.date + ' &mdash; ' + trunc(t.description, 40) + '</span>' +
+        '<span style="font-weight:600;margin:0 12px">' + fmt(t.amount) + '</span>' +
+        '<span class="cat-pill uncategorized" onclick="openCatModal(\'' + t.id + '\')" style="cursor:pointer;background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow);font-weight:600">Categorizar</span></div>';
+    }).join('') + (uncat.length > 30 ? '<p style="color:var(--text-secondary);font-size:0.82rem;margin-top:12px">... y ' + (uncat.length - 30) + ' mas</p>' : '');
   }
 }
 

@@ -30,45 +30,25 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo"><img src="logo-dark.png" alt="GuitaControl"></div>
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-view="dashboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          Dashboard
-        </a>
-        <a href="#" class="nav-item" data-view="metas">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          Metas
-        </a>
-        <a href="#" class="nav-item" data-view="patrimonio">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          Patrimonio
+        <a href="#" class="nav-item active" data-view="importar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Importar
         </a>
         <a href="#" class="nav-item" data-view="transacciones">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           Transacciones
         </a>
-        <a href="#" class="nav-item" data-view="revisar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          Revisar
+        <a href="#" class="nav-item" data-view="patrimonio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Patrimonio
         </a>
-        <a href="#" class="nav-item" data-view="categorias">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          Reglas
-        </a>
-        <a href="#" class="nav-item" data-view="importar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Importar
-        </a>
-        <a href="#" class="nav-item" data-view="deudas">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20m-7-7l7 7 7-7"/><path d="M5 12h14" stroke-dasharray="2 2"/></svg>
-          Deudas
+        <a href="#" class="nav-item" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
         </a>
         <a href="#" class="nav-item" data-view="estrategia">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
           Mi Estrategia
-        </a>
-        <a href="#" class="nav-item" data-view="inversiones">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          Inversiones
         </a>
         <div class="sidebar-bottom">
           <a href="#" class="nav-item" data-view="ajustes">
@@ -87,8 +67,8 @@
     <main class="main">
       <header class="header">
         <div>
-          <h1 id="viewTitle">Dashboard</h1>
-          <p class="header-sub" id="viewSubtitle">Resumen de tus finanzas</p>
+          <h1 id="viewTitle">Importar</h1>
+          <p class="header-sub" id="viewSubtitle">Sube cartolas y estados de cuenta</p>
         </div>
         <div class="header-actions">
           <select id="monthFilter" class="select-month"></select>
@@ -96,7 +76,7 @@
       </header>
 
       <!-- DASHBOARD -->
-      <div id="view-dashboard" class="view active">
+      <div id="view-dashboard" class="view">
         <div id="checklistCard" class="checklist-card" style="display:none"></div>
         <div class="kpi-grid">
           <div class="kpi-card kpi-green">
@@ -187,9 +167,6 @@
           <div id="topGastos" class="top-gastos"></div>
         </div>
 
-        <h3 style="margin-top:24px;margin-bottom:8px;">Deudas y Prestamos</h3>
-        <div id="loansSection"></div>
-
         <!-- INSIGHTS / COACH FINANCIERO -->
         <div class="chart-card full-width insights-section" id="insightsSection" style="display:none;margin-top:24px;">
           <h3>💡 Tu Coach Financiero</h3>
@@ -225,56 +202,12 @@
         </div>
       </div>
 
-      <!-- REVISAR -->
-      <div id="view-revisar" class="view">
-        <div class="revisar-header">
-          <p>Revisa las transacciones agrupadas por categoria. Haz clic en <strong>Editar</strong> para corregir cualquier categoria mal asignada. <span class="help-tip" data-tip="Aqui puedes ver todas tus transacciones organizadas por categoria. Si una transaccion esta en la categoria equivocada, haz clic en Editar para moverla. El sistema aprende y la proxima vez la categorizara bien automaticamente.">?</span></p>
-        </div>
-        <div id="revisarList"></div>
-      </div>
-
-      <!-- CATEGORIAS / REGLAS -->
-      <div id="view-categorias" class="view">
-        <div class="cat-header">
-          <h3>Reglas de Categorizacion <span class="help-tip" data-tip="Las reglas son palabras clave que categorizan tus transacciones automaticamente. Ejemplo: si una transaccion dice 'copec', la regla la manda a 'Bencina / Auto'. Asi no tienes que categorizar todo a mano.">?</span></h3>
-          <p>Palabras clave que asignan categoria automaticamente.</p>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" id="addRuleBtn">+ Nueva Regla <span class="help-tip" data-tip="Crea una regla: elige una palabra clave (ej: 'uber') y la categoria donde quieres que caiga (ej: 'Transporte'). Todas las transacciones con esa palabra se categorizan solas.">?</span></button>
-            <button class="btn btn-primary" id="addCatBtn" style="background:#10b981">+ Nueva Categoria <span class="help-tip" data-tip="Crea una categoria nueva con nombre, icono y color. Ejemplo: 'Gimnasio'. Despues puedes crear reglas que manden transacciones a esta categoria.">?</span></button>
-            <button class="btn btn-secondary" id="resetRulesBtn">Resetear reglas</button>
-          </div>
-        </div>
-        <div class="rules-list" id="rulesList"></div>
-        <div class="cat-header" style="margin-top:40px">
-          <h3>Sin Categorizar</h3>
-        </div>
-        <div id="uncategorized"></div>
-      </div>
-
-      <!-- METAS -->
-      <div id="view-metas" class="view">
-        <div class="metas-header">
-          <p>Define tus objetivos financieros y trackea tu avance real.</p>
-        </div>
-        <div class="goals-summary" id="goalsSummary"></div>
-        <div class="goals-tabs">
-          <button class="goals-tab active" data-filter="all" onclick="filterGoals('all')">Todas</button>
-          <button class="goals-tab" data-filter="corto" onclick="filterGoals('corto')">Corto plazo</button>
-          <button class="goals-tab" data-filter="mediano" onclick="filterGoals('mediano')">Mediano plazo</button>
-          <button class="goals-tab" data-filter="largo" onclick="filterGoals('largo')">Largo plazo</button>
-        </div>
-        <div id="goalsList"></div>
-        <div id="goalsEmpty" class="empty-state">Sin metas definidas. Agrega tu primera meta financiera.</div>
-        <button class="btn btn-primary goals-add-btn" id="addGoalBtn">+ Nueva Meta</button>
-        <div class="metas-quote" id="metasQuote"></div>
-      </div>
-
       <!-- PATRIMONIO -->
       <div id="view-patrimonio" class="view">
         <!-- PERFIL FINANCIERO -->
         <div class="patrimonio-grid-top">
           <div class="import-card">
-            <h3>👤 Perfil Financiero</h3>
+            <h3>Perfil Financiero</h3>
             <div class="profile-form">
               <div class="profile-row">
                 <label id="profileUnitLabel">Valor UF actual <span class="help-tip" data-tip="Valor de la unidad indexada de tu pais. Actualiza este valor periodicamente para mantener los calculos correctos.">?</span></label>
@@ -305,7 +238,7 @@
           </div>
 
           <div class="import-card">
-            <h3>💰 Resumen Patrimonio</h3>
+            <h3>Resumen Patrimonio</h3>
             <div class="patrimonio-summary" id="patrimonioSummary">
               <div class="pat-kpi">
                 <span class="pat-kpi-label">Patrimonio Neto <span class="help-tip" data-tip="Suma del valor actual de tus propiedades (convertido a CLP) mas tu ahorro acumulado.">?</span></span>
@@ -346,14 +279,14 @@
 
         <!-- META DE AHORRO -->
         <div class="import-card" style="margin-top:20px">
-          <h3>🎯 Meta de Ahorro Mensual <span class="help-tip" data-tip="Compara tu meta de ahorro mensual con lo que realmente ahorraste. Para que funcione, categoriza tus transferencias a fondos/APV/inversiones como 'Ahorro'.">?</span></h3>
+          <h3>Meta de Ahorro Mensual <span class="help-tip" data-tip="Compara tu meta de ahorro mensual con lo que realmente ahorraste. Para que funcione, categoriza tus transferencias a fondos/APV/inversiones como 'Ahorro'.">?</span></h3>
           <div class="savings-track" id="savingsTrack"></div>
         </div>
 
         <!-- PROPIEDADES -->
         <div class="import-card" style="margin-top:20px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h3>🏠 Propiedades e Inversiones <span class="help-tip" data-tip="Agrega tus propiedades, vehiculos o inversiones. Pon el valor en UF, la deuda pendiente, dividendo y plusvalia esperada. El sistema calcula tu patrimonio neto (valor - deuda) y proyecta su crecimiento.">?</span></h3>
+            <h3>Propiedades e Inversiones <span class="help-tip" data-tip="Agrega tus propiedades, vehiculos o inversiones. Pon el valor en UF, la deuda pendiente, dividendo y plusvalia esperada. El sistema calcula tu patrimonio neto (valor - deuda) y proyecta su crecimiento.">?</span></h3>
             <button class="btn btn-primary" id="addPropertyBtn">+ Agregar</button>
           </div>
           <div id="propertiesList"></div>
@@ -363,7 +296,7 @@
         <!-- LIQUIDEZ Y AHORROS -->
         <div class="import-card" style="margin-top:20px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h3>💵 Liquidez y Ahorros</h3>
+            <h3>Liquidez y Ahorros</h3>
             <button class="btn btn-primary" id="addAccountBtn">+ Agregar</button>
           </div>
           <div id="accountsList"></div>
@@ -376,9 +309,25 @@
           </div>
         </div>
 
+        <!-- PARTICIPACION EN EMPRESAS -->
+        <div class="import-card" style="margin-top:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h3>Participacion en Empresas</h3>
+            <button class="btn btn-primary" id="addCompanyBtn">+ Agregar</button>
+          </div>
+          <div id="companiesList"></div>
+          <div id="companiesEmpty" class="empty-state">Sin empresas registradas. Agrega tu participacion en empresas o sociedades.</div>
+          <div id="companiesTotalBar" style="display:none;margin-top:14px;padding:14px 16px;background:var(--green-bg);border-radius:var(--radius-sm);border:1px solid #d1fae5;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.82rem;font-weight:600;color:var(--green);">Total Participacion</span>
+              <span style="font-size:1.05rem;font-weight:700;color:var(--green);" id="companiesTotalValue">$0</span>
+            </div>
+          </div>
+        </div>
+
         <!-- PROYECCION JUBILACION -->
         <div class="import-card" style="margin-top:20px">
-          <h3>📈 Proyeccion hacia Jubilacion</h3>
+          <h3>Proyeccion hacia Jubilacion</h3>
           <p style="color:var(--text-secondary);font-size:0.83rem;margin-bottom:16px">Crecimiento estimado de tu patrimonio considerando ahorro mensual, rentabilidad y plusvalia de propiedades.</p>
           <div style="position:relative;width:100%;"><canvas id="chartProjection"></canvas></div>
           <div class="projection-insights" id="projectionInsights"></div>
@@ -435,9 +384,9 @@
       </div>
 
       <!-- IMPORTAR -->
-      <div id="view-importar" class="view">
+      <div id="view-importar" class="view active">
         <div class="import-card">
-          <h3>📂 Importar Cartola <span class="help-tip" data-tip="Sube tus cartolas bancarias o estados de cuenta de tarjeta. El sistema detecta automaticamente si es Banco BICE (Excel) o CMR (Excel o PDF). Si subes el mismo archivo dos veces, los duplicados se ignoran.">?</span></h3>
+          <h3>Arrastra tu cartola</h3>
           <p>Sube archivos Excel (.xlsx) o PDF de cualquier banco o tarjeta. Se detecta el formato automaticamente y los duplicados se ignoran.</p>
           <label class="upload-area" id="dropImport">
             <input type="file" id="fileImport" accept=".xlsx,.xls,.pdf" multiple hidden>
@@ -446,11 +395,59 @@
           </label>
           <div id="importStatus" class="import-status"></div>
         </div>
+
+        <div class="import-card" style="margin-top:24px">
+          <h3>Integraciones API con Bancos</h3>
+          <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px">Conecta tu banco y sincroniza tus movimientos automaticamente. Sin archivos, sin esfuerzo.</p>
+          <div class="bank-integrations-grid">
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#EC7000;color:#fff;font-size:1rem">Itau</div>
+              <span class="bank-name">Itau</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#001D6E;color:#fff;font-size:0.5rem;line-height:1.4">BANCO<br><span style="color:#E31937;font-size:0.55rem">DE CHILE</span></div>
+              <span class="bank-name">Banco de Chile</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#EC0000;color:#fff;font-size:0.65rem">Santander</div>
+              <span class="bank-name">Santander</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#003DA5;color:#fff;font-size:1.1rem">BCI</div>
+              <span class="bank-name">BCI</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#1B3A5C;color:#fff;font-size:0.9rem">BICE</div>
+              <span class="bank-name">BICE</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#00843D;color:#fff;font-size:0.6rem;line-height:1.3">BANCO<br>ESTADO</div>
+              <span class="bank-name">BancoEstado</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#EC111A;color:#fff;font-size:0.55rem">Scotiabank</div>
+              <span class="bank-name">Scotiabank</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+            <div class="bank-integration-item coming-soon">
+              <div class="bank-logo-box" style="background:#8CC63F;color:#fff;font-size:0.6rem">Falabella</div>
+              <span class="bank-name">Falabella</span>
+              <span class="bank-status">Pronto</span>
+            </div>
+          </div>
+        </div>
+
         <div class="import-card" style="margin-top:24px">
           <h3>Datos</h3>
           <div class="import-actions">
-            <button class="btn btn-secondary" id="dedupBtn">Limpiar duplicados <span class="help-tip" data-tip="Busca y elimina transacciones repetidas (misma fecha, monto y descripcion). Util si importaste la misma cartola dos veces.">?</span></button>
-            <button class="btn btn-secondary" id="exportBtn">Exportar CSV <span class="help-tip" data-tip="Descarga todas tus transacciones en formato CSV para abrir en Excel o Google Sheets.">?</span></button>
+            <button class="btn btn-secondary" id="dedupBtn">Limpiar duplicados</button>
+            <button class="btn btn-secondary" id="exportBtn">Exportar CSV</button>
             <button class="btn btn-danger" id="clearBtn">Borrar todo</button>
           </div>
           <div id="storageInfo" class="import-status"></div>
@@ -597,42 +594,33 @@
         </div>
       </div>
 
-      <!-- DEUDAS -->
-      <div id="view-deudas" class="view">
-        <div class="import-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h3>💳 Mis Deudas</h3>
-            <button class="btn btn-primary" id="addDebtBtn">+ Agregar Deuda</button>
-          </div>
-          <p style="font-size:0.83rem;color:var(--text-secondary);margin-bottom:16px">Registra deudas que tienes o que te deben. Se concilian automaticamente con las transacciones importadas.</p>
-          <div id="debtsList"></div>
-          <div id="debtsEmpty" class="empty-state" style="display:none">Sin deudas registradas. Agrega tu primera deuda.</div>
-        </div>
-
-        <div id="debtsReconciliation"></div>
-      </div>
-
-      <!-- INVERSIONES -->
-      <div id="view-inversiones" class="view">
-        <div class="inv-filters">
-          <div class="inv-cat-tabs" id="invCatTabs">
-            <button class="inv-tab active" data-cat="rentaVariable">📈 Renta Variable</button>
-            <button class="inv-tab" data-cat="rentaFija">📄 Renta Fija</button>
-            <button class="inv-tab" data-cat="caja">💵 Caja</button>
-            <button class="inv-tab" data-cat="inmobiliario">🏠 Inmobiliario</button>
-          </div>
-          <div class="inv-time-tabs" id="invTimeTabs">
-            <button class="inv-time active" data-period="1y">1 Año</button>
-            <button class="inv-time" data-period="6m">6 Meses</button>
-            <button class="inv-time" data-period="1m">1 Mes</button>
-          </div>
-        </div>
-        <div id="invContent"></div>
-      </div>
-
       <div id="view-ajustes" class="view">
-        <div class="import-card">
-          <h3>👤 Perfil</h3>
+        <!-- CATEGORIZAR (movido a Ajustes) -->
+        <div id="uncatBanner" class="uncat-banner" style="display:none">
+          <div class="uncat-banner-icon" style="font-size:1.2rem">!</div>
+          <div class="uncat-banner-text">
+            <strong id="uncatBannerCount">0</strong> transacciones sin categorizar
+            <span class="uncat-banner-sub">Asigna una categoria para que aparezcan en tu dashboard</span>
+          </div>
+        </div>
+        <div class="import-card" style="margin-top:12px">
+          <h3>Reglas de Categorizacion</h3>
+          <p>Palabras clave que asignan categoria automaticamente.</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="addRuleBtn">+ Nueva Regla</button>
+            <button class="btn btn-primary" id="addCatBtn" style="background:#10b981">+ Nueva Categoria</button>
+            <button class="btn btn-secondary" id="resetRulesBtn">Resetear reglas</button>
+          </div>
+          <div class="rules-list" id="rulesList" style="margin-top:16px"></div>
+        </div>
+
+        <div class="import-card" style="margin-top:20px">
+          <h3>Sin Categorizar</h3>
+          <div id="uncategorized"></div>
+        </div>
+
+        <div class="import-card" style="margin-top:20px">
+          <h3>Perfil</h3>
           <div class="profile-form">
             <div class="profile-row">
               <label>Pais / Moneda</label>
@@ -674,7 +662,7 @@
         </div>
 
         <div class="import-card" style="margin-top:20px">
-          <h3>🚦 Semaforos - Limites recomendados (% del ingreso)</h3>
+          <h3>Semaforos - Limites recomendados (% del ingreso)</h3>
           <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;">Ajusta los porcentajes maximos recomendados por categoria. Se usan en la seccion "Salud Financiera" del dashboard.</p>
           <div class="profile-form" id="benchmarkSettings"></div>
         </div>
@@ -835,125 +823,24 @@
     </div>
   </div>
 
-  <!-- MODAL META -->
-  <div class="modal-overlay" id="goalModal">
+  <!-- COMPANY MODAL -->
+  <div class="modal-overlay" id="companyModal">
     <div class="modal">
-      <h3 id="goalModalTitle">Nueva Meta</h3>
-      <div style="display:flex;flex-direction:column;gap:12px;padding:0 4px;">
-        <label>Categoria</label>
-        <select id="goalCategory" class="filter-select full-w" onchange="updateGoalForm()">
-          <option value="emergencia">🛡️ Fondo de emergencia</option>
-          <option value="viaje">✈️ Viaje</option>
-          <option value="auto">🚗 Auto</option>
-          <option value="casa">🏠 Pie de casa / propiedad</option>
-          <option value="educacion">🎓 Educacion</option>
-          <option value="negocio">💼 Negocio / emprendimiento</option>
-          <option value="retiro">🏖️ Retiro / libertad financiera</option>
-          <option value="otro">📌 Otro</option>
-        </select>
-        <div id="goalCategoryHint" style="font-size:0.78rem;color:var(--text-secondary);padding:6px 12px;background:var(--bg);border-radius:8px;"></div>
-        <label>Nombre de la meta</label>
-        <input type="text" id="goalName" placeholder="ej: Fondo de emergencia 6 meses" class="search-input full-w">
-        <label>Monto objetivo (CLP)</label>
-        <input type="number" id="goalTarget" placeholder="ej: 5000000" class="search-input full-w">
-        <!-- TRADE-IN (solo para auto/casa) -->
-        <div id="goalTradeInSection" style="display:none;margin-top:4px">
-          <label>¿Tienes algo en parte de pago?</label>
-          <input type="number" id="goalTradeIn" placeholder="ej: valor de tu auto actual" class="search-input full-w">
-          <div id="goalTradeInHint" style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px"></div>
-          <div id="goalNetTarget" style="display:none;font-size:0.82rem;font-weight:600;color:var(--primary);margin-top:6px;padding:8px 12px;background:#eef2ff;border-radius:8px"></div>
-        </div>
-        <label>Plazo</label>
-        <select id="goalTerm" class="filter-select full-w">
-          <option value="corto">Corto plazo (menos de 1 año)</option>
-          <option value="mediano">Mediano plazo (1 a 5 años)</option>
-          <option value="largo">Largo plazo (mas de 5 años)</option>
-        </select>
-        <label>Fecha objetivo (opcional)</label>
-        <input type="date" id="goalDate" class="search-input full-w">
-        <label>Ahorro mensual asignado (CLP)</label>
-        <input type="number" id="goalMonthly" placeholder="ej: 200000" class="search-input full-w">
-        <label>Prioridad</label>
-        <select id="goalPriority" class="filter-select full-w">
-          <option value="alta">🔴 Alta — lo necesito si o si</option>
-          <option value="media">🟡 Media — importante pero flexible</option>
-          <option value="baja">🟢 Baja — seria bonito lograrlo</option>
-        </select>
-        <label>Notas (opcional)</label>
-        <input type="text" id="goalNotes" placeholder="ej: Para el viaje a Europa en verano" class="search-input full-w">
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" id="goalModalCancel">Cancelar</button>
-        <button class="btn btn-danger" id="goalModalDelete" style="display:none">Eliminar</button>
-        <button class="btn btn-primary" id="goalModalSave">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- BOTON FLOTANTE: Me llegó plata -->
-  <button class="fab-windfall" id="fabWindfall" onclick="openWindfall()" title="Me llegó plata">💸</button>
-
-  <!-- MODAL: ¿Qué hago con esta plata? -->
-  <div class="modal-overlay" id="windfallModal">
-    <div class="modal" style="max-width:500px">
-      <h3 id="windfallTitle">💸 Me llegó plata</h3>
+      <h3 id="companyModalTitle">Agregar Empresa</h3>
       <div class="modal-body">
-        <!-- PASO 1: Monto -->
-        <div id="wfStep1">
-          <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:16px">¿Te llegó un bono, vendiste algo, herencia, aguinaldo? Dime cuánto y te digo qué hacer.</p>
-          <label class="ob-label">¿Cuánto te llegó?</label>
-          <input type="number" id="wfAmount" class="ob-input" placeholder="ej: 5000000" style="font-size:1.1rem;font-weight:600">
-          <label class="ob-label" style="margin-top:12px">¿De dónde viene? (opcional)</label>
-          <select id="wfSource" class="ob-select">
-            <option value="">Seleccionar...</option>
-            <option value="bono">Bono / Aguinaldo</option>
-            <option value="venta">Venta de algo</option>
-            <option value="herencia">Herencia</option>
-            <option value="freelance">Trabajo extra / Freelance</option>
-            <option value="devolucion">Devolución de impuestos</option>
-            <option value="regalo">Regalo</option>
-            <option value="otro">Otro</option>
-          </select>
-          <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="wfGoToQuiz()">Siguiente →</button>
-        </div>
-        <!-- PASO 2: Mini-quiz -->
-        <div id="wfStep2" style="display:none">
-          <div class="wf-quiz">
-            <div class="wf-quiz-q" id="wfQ1">
-              <p class="wf-quiz-label">¿Qué quieres hacer con esta plata?</p>
-              <div class="wf-quiz-opts">
-                <button class="wf-opt" data-q="intent" data-val="seguridad" onclick="wfSelect(this)">🛡️<span>Guardarla segura</span><small>Que no se la coma la inflación</small></button>
-                <button class="wf-opt" data-q="intent" data-val="crecer" onclick="wfSelect(this)">📈<span>Hacerla crecer</span><small>Invertir para ganar más</small></button>
-                <button class="wf-opt" data-q="intent" data-val="mix" onclick="wfSelect(this)">⚖️<span>Un poco de ambas</span><small>Parte segura, parte agresiva</small></button>
-                <button class="wf-opt" data-q="intent" data-val="disfrutar" onclick="wfSelect(this)">🎉<span>Disfrutarla (y algo invertir)</span><small>Me la merezco, pero con cabeza</small></button>
-              </div>
-            </div>
-            <div class="wf-quiz-q" id="wfQ2" style="display:none">
-              <p class="wf-quiz-label">¿En cuánto tiempo podrías necesitar esta plata?</p>
-              <div class="wf-quiz-opts">
-                <button class="wf-opt" data-q="horizonte" data-val="corto" onclick="wfSelect(this)">⚡<span>En los próximos meses</span><small>Menos de 1 año</small></button>
-                <button class="wf-opt" data-q="horizonte" data-val="medio" onclick="wfSelect(this)">📅<span>En 1-3 años</span><small>Tengo algo de tiempo</small></button>
-                <button class="wf-opt" data-q="horizonte" data-val="largo" onclick="wfSelect(this)">🏔️<span>No la necesito pronto</span><small>+3 años, puedo esperar</small></button>
-              </div>
-            </div>
-            <div class="wf-quiz-q" id="wfQ3" style="display:none">
-              <p class="wf-quiz-label">Con ESTA plata específica, ¿cuánto riesgo toleras?</p>
-              <div class="wf-quiz-opts">
-                <button class="wf-opt" data-q="riesgo" data-val="nada" onclick="wfSelect(this)">🟢<span>Cero riesgo</span><small>Prefiero ganar poco pero seguro</small></button>
-                <button class="wf-opt" data-q="riesgo" data-val="algo" onclick="wfSelect(this)">🟡<span>Algo de riesgo</span><small>Puedo tolerar bajas temporales</small></button>
-                <button class="wf-opt" data-q="riesgo" data-val="full" onclick="wfSelect(this)">🔴<span>Full riesgo</span><small>Vamos con todo, es plata extra</small></button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- PASO 3: Resultado -->
-        <div id="wfStep3" style="display:none">
-          <div id="wfResult"></div>
-          <button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="wfBackToStart()">← Cambiar monto</button>
-        </div>
+        <label>Nombre de la empresa</label>
+        <input type="text" id="companyName" placeholder="ej: Tricapitals SpA" class="search-input full-w">
+        <label style="margin-top:12px">Valor estimado de la empresa (CLP)</label>
+        <input type="number" id="companyValue" placeholder="ej: 500000000" class="search-input full-w">
+        <label style="margin-top:12px">Tu participacion (%)</label>
+        <input type="number" id="companyPct" placeholder="ej: 33" step="0.1" min="0" max="100" class="search-input full-w" style="width:100px">
+        <label style="margin-top:12px">Notas (opcional)</label>
+        <input type="text" id="companyNotes" placeholder="ej: Socio fundador" class="search-input full-w">
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="document.getElementById('windfallModal').classList.remove('open')">Cerrar</button>
+        <button class="btn btn-secondary" id="companyModalCancel">Cancelar</button>
+        <button class="btn btn-danger" id="companyModalDelete" style="display:none">Eliminar</button>
+        <button class="btn btn-primary" id="companyModalSave">Guardar</button>
       </div>
     </div>
   </div>
