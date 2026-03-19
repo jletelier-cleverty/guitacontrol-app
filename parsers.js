@@ -881,17 +881,20 @@ function detectBankPdf(text) {
   if (t.indexOf('unimarc') >= 0 || t.indexOf('unicard') >= 0) return 'tc_unimarc';
   if (t.indexOf('tarjeta ripley') >= 0 || (t.indexOf('ripley') >= 0 && t.indexOf('cupo') >= 0)) return 'tc_ripley';
 
-  // Bancos
+  // Bancos — detectar por header/titulo, no por contenido de transferencias
+  // Consorcio primero: sus cartolas dicen "consorcio" en header pero mencionan otros bancos en TEFs
+  var h = t.substring(0, 3000).toLowerCase(); // Solo header/inicio para deteccion de banco emisor
+  if (h.indexOf('consorcio') >= 0 || (t.indexOf('consorcio') >= 0 && t.indexOf('cartola de movimientos') >= 0)) return 'consorcio';
   if (t.indexOf('banco de chile') >= 0 || t.indexOf('cargos (clp)') >= 0 ||
       t.indexOf('canal o sucursal') >= 0 || t.indexOf('cartolas claras') >= 0) return 'bchile';
-  if (t.indexOf('banco bice') >= 0 || (t.indexOf('bice') >= 0 && t.indexOf('categoria') >= 0)) return 'bice';
+  if ((t.indexOf('bice') >= 0 && t.indexOf('categoria') >= 0) ||
+      (h.indexOf('banco bice') >= 0) || (h.indexOf('bice') >= 0 && h.indexOf('cuenta corriente') >= 0)) return 'bice';
   if (t.indexOf('santander') >= 0 && t.indexOf('cuenta corriente') >= 0) return 'santander';
   if (t.indexOf('scotiabank') >= 0 && t.indexOf('cuenta corriente') >= 0) return 'scotiabank';
   if ((t.indexOf('banco bci') >= 0 || t.indexOf('banco credito') >= 0) && t.indexOf('cuenta') >= 0) return 'bci';
   if (t.indexOf('itau') >= 0 || t.indexOf('itaú') >= 0) return 'itau';
   if (t.indexOf('banco falabella') >= 0 && t.indexOf('cuenta') >= 0) return 'falabella';
   if (t.indexOf('banco ripley') >= 0) return 'ripley';
-  if (t.indexOf('banco consorcio') >= 0 || (t.indexOf('consorcio') >= 0 && t.indexOf('cuenta') >= 0)) return 'consorcio';
   if (t.indexOf('banco internacional') >= 0) return 'internacional';
   // BancoEstado al final para no capturar "Estado de Cuenta" de otros bancos
   if (t.indexOf('bancoestado') >= 0 || t.indexOf('cuentarut') >= 0 ||
