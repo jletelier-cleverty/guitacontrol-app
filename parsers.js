@@ -1309,14 +1309,22 @@ async function importFiles(files) {
       totalAdded += r.added;
       totalDupes += r.dupes;
       messages.push(files[i].name + ': ' + r.added + ' nuevas' + (r.dupes > 0 ? ', ' + r.dupes + ' duplicadas' : '') + (r.total === 0 ? ' (formato no reconocido)' : '') + ' [' + result.source + ']');
-      // Guardar en historial de importaciones
+      // Guardar en historial de importaciones con totales
       if (r.added > 0 && r.batch_id) {
+        var batchTxs = transactions.filter(function(tx) { return tx.batch_id === r.batch_id; });
+        var totalIngresos = 0, totalGastos = 0;
+        batchTxs.forEach(function(tx) {
+          if (tx.type === 'ingreso') totalIngresos += tx.amount;
+          else totalGastos += tx.amount;
+        });
         addImportHistory({
           batch_id: r.batch_id,
           file_name: files[i].name,
           source: result.source,
           parser_used: result.parserUsed || 'rules',
           count: r.added,
+          total_ingresos: totalIngresos,
+          total_gastos: totalGastos,
           date: new Date().toISOString()
         });
       }
@@ -1381,10 +1389,14 @@ function renderImportHistory() {
     var timeStr = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     var parserBadge = h.parser_used === 'ai' ? '<span class="import-badge badge-ai">IA</span>' :
                       h.parser_used === 'manual' ? '<span class="import-badge badge-manual">Manual</span>' : '';
+    var totalsHtml = '';
+    if (h.total_ingresos || h.total_gastos) {
+      totalsHtml = ' &middot; <span style="color:var(--green)">+' + fmt(h.total_ingresos || 0) + '</span> <span style="color:var(--red)">-' + fmt(h.total_gastos || 0) + '</span>';
+    }
     html += '<div class="import-history-row">' +
       '<div class="import-history-info">' +
         '<strong>' + h.file_name + '</strong> ' + parserBadge +
-        '<small>' + h.source + ' &middot; ' + h.count + ' transacciones &middot; ' + dateStr + ' ' + timeStr + '</small>' +
+        '<small>' + h.source + ' &middot; ' + h.count + ' transacciones' + totalsHtml + ' &middot; ' + dateStr + ' ' + timeStr + '</small>' +
       '</div>' +
       '<button class="btn-icon-delete" onclick="deleteImportBatch(\'' + h.batch_id + '\')" title="Eliminar esta importacion">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>' +
