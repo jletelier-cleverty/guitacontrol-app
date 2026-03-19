@@ -34,9 +34,12 @@ function isVisible(tx) {
 }
 
 function isDuplicate(t) {
-  var nd = normalizeDesc(t.description);
+  // Use full normalized description (not truncated) to avoid false positives
+  // on transactions with same date+amount but different full descriptions
+  var nd = t.description.toLowerCase().replace(/[^a-z0-9]/g, '');
   return transactions.some(function(x) {
-    return x.date === t.date && x.amount === t.amount && normalizeDesc(x.description) === nd;
+    var xd = x.description.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return x.date === t.date && x.amount === t.amount && xd === nd;
   });
 }
 

@@ -903,7 +903,10 @@ function detectBankPdf(text) {
   // Bancos — usar solo primeras 500 chars (header/titulo del PDF) para detectar banco emisor.
   // Mas abajo aparecen TEFs que mencionan OTROS bancos y confunden la deteccion.
   var h = text.substring(0, 500).toLowerCase();
+  // Consorcio: logo es imagen (no texto), detectar por estructura unica de columnas
   if (h.indexOf('consorcio') >= 0) return 'consorcio';
+  if (h.indexOf('cartola de movimientos') >= 0 && t.indexOf('serie') >= 0 &&
+      t.indexOf('cargo') >= 0 && t.indexOf('abono') >= 0 && t.indexOf('saldo') >= 0) return 'consorcio';
   if (h.indexOf('banco de chile') >= 0 || h.indexOf('cartolas claras') >= 0) return 'bchile';
   if (h.indexOf('bice') >= 0) return 'bice';
   if (h.indexOf('santander') >= 0) return 'santander';
@@ -919,15 +922,15 @@ function detectBankPdf(text) {
   if (t.indexOf('bice') >= 0 && t.indexOf('categoria') >= 0) return 'bice';
   if (t.indexOf('bancoestado') >= 0 || t.indexOf('cuentarut') >= 0) return 'estado';
 
-  // Fintech
-  if (t.indexOf('tenpo') >= 0) return 'tenpo';
-  if (t.indexOf('mercado pago') >= 0) return 'mercadopago';
-  if (t.indexOf('mach') >= 0) return 'mach';
-  if (t.indexOf('global66') >= 0) return 'global66';
-  if (t.indexOf('copec pay') >= 0) return 'copecpay';
-  if (t.indexOf('dale') >= 0 && t.indexOf('coopeuch') >= 0) return 'dale';
-  if (t.indexOf('fpay') >= 0 || t.indexOf('falabella pay') >= 0) return 'fpay';
-  if (t.indexOf('prex') >= 0) return 'prex';
+  // Fintech — usar solo header para evitar que TEFs a fintechs confundan deteccion
+  if (h.indexOf('tenpo') >= 0) return 'tenpo';
+  if (h.indexOf('mercado pago') >= 0) return 'mercadopago';
+  if (h.indexOf('mach') >= 0) return 'mach';
+  if (h.indexOf('global66') >= 0) return 'global66';
+  if (h.indexOf('copec pay') >= 0) return 'copecpay';
+  if (h.indexOf('dale') >= 0 && h.indexOf('coopeuch') >= 0) return 'dale';
+  if (h.indexOf('fpay') >= 0 || h.indexOf('falabella pay') >= 0) return 'fpay';
+  if (h.indexOf('prex') >= 0) return 'prex';
 
   // Deteccion generica de TC por keywords comunes en estados de cuenta
   if (t.indexOf('cupo disponible') >= 0 || t.indexOf('pago minimo') >= 0 ||
