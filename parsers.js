@@ -1038,6 +1038,17 @@ async function importFile(file) {
     else if (bank !== 'desconocido') parsed.forEach(function(tx) { tx.source = 'banco'; });
   }
 
+  // ===== VALIDACION: si Capa 1 produjo resultados sospechosos, descartar =====
+  if (parsed.length > 0) {
+    // Detectar montos absurdos (> 500M pesos) — señal de parseo malo
+    var suspicious = parsed.filter(function(tx) { return tx.amount > 500000000; });
+    if (suspicious.length > parsed.length * 0.1) {
+      console.warn('Capa 1 produjo ' + suspicious.length + '/' + parsed.length + ' montos > 500M, descartando resultados');
+      parsed = [];
+      label = '';
+    }
+  }
+
   // ===== CAPA 2: Claude AI via Edge Function (~$0.01, ~2 seg) =====
   if (parsed.length === 0 && rawText.length > 50) {
     parserUsed = 'ai';
