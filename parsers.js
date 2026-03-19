@@ -839,21 +839,20 @@ function detectBankExcel(workbook) {
   if (text.indexOf('unimarc') >= 0 || text.indexOf('unicard') >= 0 || text.indexOf('smu') >= 0) return 'tc_unimarc';
   if (text.indexOf('ripley') >= 0 && text.indexOf('tarjeta') >= 0) return 'tc_ripley';
 
-  // Bancos (orden: mas especifico primero)
-  if (text.indexOf('banco de chile') >= 0 || text.indexOf('cargos (clp)') >= 0 ||
-      text.indexOf('abonos (clp)') >= 0 || text.indexOf('canal o sucursal') >= 0) return 'bchile';
-  if (text.indexOf('banco bice') >= 0 || (text.indexOf('bice') >= 0 && text.indexOf('categoria') >= 0)) return 'bice';
-  if (text.indexOf('santander') >= 0) return 'santander';
-  if (text.indexOf('scotiabank') >= 0) return 'scotiabank';
-  if (text.indexOf('banco bci') >= 0 || text.indexOf('banco credito') >= 0 ||
-      (text.indexOf('bci') >= 0 && text.indexOf('cartola') >= 0)) return 'bci';
-  if (text.indexOf('itau') >= 0 || text.indexOf('itaú') >= 0) return 'itau';
-  if (text.indexOf('bancoestado') >= 0 || text.indexOf('cuentarut') >= 0 ||
-      (text.indexOf('estado') >= 0 && text.indexOf('banco') >= 0)) return 'estado';
-  if (text.indexOf('banco falabella') >= 0) return 'falabella';
-  if (text.indexOf('banco ripley') >= 0) return 'ripley';
-  if (text.indexOf('banco consorcio') >= 0 || text.indexOf('consorcio') >= 0) return 'consorcio';
-  if (text.indexOf('banco internacional') >= 0) return 'internacional';
+  // Bancos — usar solo header (primeras 30 filas) para detectar banco emisor
+  // El contenido de transacciones menciona otros bancos en TEFs y confunde
+  if (headerText.indexOf('consorcio') >= 0) return 'consorcio';
+  if (headerText.indexOf('banco de chile') >= 0 || headerText.indexOf('cargos (clp)') >= 0 ||
+      headerText.indexOf('abonos (clp)') >= 0 || headerText.indexOf('canal o sucursal') >= 0) return 'bchile';
+  if (headerText.indexOf('bice') >= 0 || (headerText.indexOf('bice') >= 0 && text.indexOf('categoria') >= 0)) return 'bice';
+  if (headerText.indexOf('santander') >= 0) return 'santander';
+  if (headerText.indexOf('scotiabank') >= 0) return 'scotiabank';
+  if (headerText.indexOf('bci') >= 0 || headerText.indexOf('banco credito') >= 0) return 'bci';
+  if (headerText.indexOf('itau') >= 0 || headerText.indexOf('itaú') >= 0) return 'itau';
+  if (headerText.indexOf('bancoestado') >= 0 || headerText.indexOf('cuentarut') >= 0) return 'estado';
+  if (headerText.indexOf('banco falabella') >= 0) return 'falabella';
+  if (headerText.indexOf('banco ripley') >= 0) return 'ripley';
+  if (headerText.indexOf('banco internacional') >= 0) return 'internacional';
 
   // Fintech
   if (text.indexOf('tenpo') >= 0) return 'tenpo';
@@ -881,28 +880,24 @@ function detectBankPdf(text) {
   if (t.indexOf('unimarc') >= 0 || t.indexOf('unicard') >= 0) return 'tc_unimarc';
   if (t.indexOf('tarjeta ripley') >= 0 || (t.indexOf('ripley') >= 0 && t.indexOf('cupo') >= 0)) return 'tc_ripley';
 
-  // Bancos — detectar por header/titulo, no por contenido de transferencias
-  // Consorcio primero: sus cartolas dicen "consorcio" en header pero mencionan otros bancos en TEFs
-  var h = t.substring(0, 3000).toLowerCase(); // Solo header/inicio para deteccion de banco emisor
-  if (h.indexOf('consorcio') >= 0 || (t.indexOf('consorcio') >= 0 && t.indexOf('cartola de movimientos') >= 0)) return 'consorcio';
-  if (t.indexOf('banco de chile') >= 0 || t.indexOf('cargos (clp)') >= 0 ||
-      t.indexOf('canal o sucursal') >= 0 || t.indexOf('cartolas claras') >= 0) return 'bchile';
-  if ((t.indexOf('bice') >= 0 && t.indexOf('categoria') >= 0) ||
-      (h.indexOf('banco bice') >= 0) || (h.indexOf('bice') >= 0 && h.indexOf('cuenta corriente') >= 0)) return 'bice';
-  if (t.indexOf('santander') >= 0 && t.indexOf('cuenta corriente') >= 0) return 'santander';
-  if (t.indexOf('scotiabank') >= 0 && t.indexOf('cuenta corriente') >= 0) return 'scotiabank';
-  if ((t.indexOf('banco bci') >= 0 || t.indexOf('banco credito') >= 0) && t.indexOf('cuenta') >= 0) return 'bci';
-  if (t.indexOf('itau') >= 0 || t.indexOf('itaú') >= 0) return 'itau';
-  if (t.indexOf('banco falabella') >= 0 && t.indexOf('cuenta') >= 0) return 'falabella';
-  if (t.indexOf('banco ripley') >= 0) return 'ripley';
-  if (t.indexOf('banco internacional') >= 0) return 'internacional';
-  // BancoEstado al final para no capturar "Estado de Cuenta" de otros bancos
-  if (t.indexOf('bancoestado') >= 0 || t.indexOf('cuentarut') >= 0 ||
-      (t.indexOf('banco') >= 0 && t.indexOf('estado') >= 0 && t.indexOf('banco de chile') < 0 &&
-       t.indexOf('banco falabella') < 0 && t.indexOf('banco ripley') < 0 &&
-       t.indexOf('banco consorcio') < 0 && t.indexOf('banco internacional') < 0 &&
-       t.indexOf('santander') < 0 && t.indexOf('scotiabank') < 0 &&
-       t.indexOf('bci') < 0 && t.indexOf('itau') < 0)) return 'estado';
+  // Bancos — usar solo primeras 500 chars (header/titulo del PDF) para detectar banco emisor.
+  // Mas abajo aparecen TEFs que mencionan OTROS bancos y confunden la deteccion.
+  var h = text.substring(0, 500).toLowerCase();
+  if (h.indexOf('consorcio') >= 0) return 'consorcio';
+  if (h.indexOf('banco de chile') >= 0 || h.indexOf('cartolas claras') >= 0) return 'bchile';
+  if (h.indexOf('bice') >= 0) return 'bice';
+  if (h.indexOf('santander') >= 0) return 'santander';
+  if (h.indexOf('scotiabank') >= 0) return 'scotiabank';
+  if (h.indexOf('bci') >= 0 || h.indexOf('credito e inversiones') >= 0) return 'bci';
+  if (h.indexOf('itau') >= 0 || h.indexOf('itaú') >= 0) return 'itau';
+  if (h.indexOf('falabella') >= 0 && h.indexOf('banco') >= 0) return 'falabella';
+  if (h.indexOf('ripley') >= 0 && h.indexOf('banco') >= 0) return 'ripley';
+  if (h.indexOf('internacional') >= 0) return 'internacional';
+  if (h.indexOf('bancoestado') >= 0 || h.indexOf('cuentarut') >= 0) return 'estado';
+  // Fallback: buscar en mas texto pero con keywords estructurales (no de contenido)
+  if (t.indexOf('cargos (clp)') >= 0 || t.indexOf('canal o sucursal') >= 0) return 'bchile';
+  if (t.indexOf('bice') >= 0 && t.indexOf('categoria') >= 0) return 'bice';
+  if (t.indexOf('bancoestado') >= 0 || t.indexOf('cuentarut') >= 0) return 'estado';
 
   // Fintech
   if (t.indexOf('tenpo') >= 0) return 'tenpo';
