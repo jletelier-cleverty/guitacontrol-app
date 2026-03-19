@@ -125,11 +125,45 @@ async function loadRules() {
   var { data } = await sb.from('rules').select('*').eq('user_id', currentUser.id).order('created_at');
   if (data && data.length > 0) {
     rules = data.map(function(r) { return { keyword: r.keyword, category: r.category, _id: r.id }; });
+    // Auto-add essential banking rules if missing
+    await ensureEssentialRules();
   } else {
     // First time — load defaults and save
     rules = getDefaultRules();
     await saveAllRules();
   }
+}
+
+var ESSENTIAL_RULES = [
+  { keyword: 'abono desde linea de credito', category: 'Transferencias Propias' },
+  { keyword: 'cargo pago linea de credito', category: 'Transferencias Propias' },
+  { keyword: 'cargo de impuesto por uso linea', category: 'Transferencias Propias' },
+  { keyword: 'cargo cuota creditos', category: 'Transferencias Propias' },
+  { keyword: 'abono reversa pago', category: 'Transferencias Propias' },
+  { keyword: 'pago tc web', category: 'Transferencias Propias' },
+  { keyword: 'cargo pago tarjeta de credito', category: 'Transferencias Propias' },
+  { keyword: 'abono gastos operacionales', category: 'Transferencias Propias' },
+  { keyword: 'cargo comision mantencion', category: 'Transferencias Propias' }
+];
+
+async function ensureEssentialRules() {
+  var existing = rules.map(function(r) { return r.keyword.toLowerCase(); });
+  var toAdd = ESSENTIAL_RULES.filter(function(r) {
+    return existing.indexOf(r.keyword) === -1;
+  });
+  if (toAdd.length === 0) return;
+  for (var i = 0; i < toAdd.length; i++) {
+    await addRule(toAdd[i].keyword, toAdd[i].category);
+  }
+  // Re-categorize uncategorized transactions with new rules
+  var updated = false;
+  transactions.forEach(function(tx) {
+    if (!tx.category || tx.category === '') {
+      var cat = categorize(tx);
+      if (cat) { tx.category = cat; updated = true; }
+    }
+  });
+  if (updated) console.log('Auto-applied essential banking rules');
 }
 
 async function saveAllRules() {
