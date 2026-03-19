@@ -697,16 +697,28 @@ function parseGenericPdf(text) {
     var afterDate = line.substring(line.indexOf(dm[1]) + dm[1].length).trim();
     var desc = '', amounts = [];
 
-    // Extract numbers from afterDate
+    // Extract amounts: look for "$ NUMBER" pattern first (explicit currency marker)
+    // Then fall back to plain numbers, but skip reference/serie numbers (too many digits without dots)
     var tokens = afterDate.split(/\s+/);
     for (var t = 0; t < tokens.length; t++) {
-      var cleaned = tokens[t].replace(/[\$]/g, '');
-      // Check if token looks like a Chilean peso amount (digits with dots as thousands)
+      var tok = tokens[t];
+      var isAfterDollar = (t > 0 && tokens[t - 1] === '$') || tok.charAt(0) === '$';
+      var cleaned = tok.replace(/[\$]/g, '');
       if (/^-?[\d.]+$/.test(cleaned) && cleaned.replace(/\./g, '').length > 0) {
         var num = parseInt(cleaned.replace(/\./g, '')) || 0;
+        // Skip numbers that are likely reference/serie numbers:
+        // - No dots as thousands separators AND more than 8 digits = reference number
+        // - Or exceeds 999 million pesos (unrealistic for personal finance)
+        var hasDots = cleaned.indexOf('.') >= 0;
+        var digitCount = cleaned.replace(/\./g, '').length;
+        if (num > 999000000) { desc += (desc ? ' ' : '') + tok; continue; }
+        if (!hasDots && !isAfterDollar && digitCount > 8) { desc += (desc ? ' ' : '') + tok; continue; }
         if (num !== 0) amounts.push(num);
+      } else if (tok === '$') {
+        // Skip the $ sign itself, next token is the amount
+        continue;
       } else {
-        desc += (desc ? ' ' : '') + tokens[t];
+        desc += (desc ? ' ' : '') + tok;
       }
     }
 
@@ -727,16 +739,24 @@ function parseGenericPdf(text) {
     desc = desc.replace(/\s+/g, ' ').trim();
     if (!desc || amounts.length === 0) continue;
 
-    // Heuristic: if 2+ amounts, first non-zero is cargo, second is abono (or vice versa)
+    // Heuristic for Cargo/Abono/Saldo pattern (3 amounts = most Chilean banks)
+    // Pattern: [Cargo, Abono, Saldo] — movement is the non-zero of Cargo or Abono
     var amount = 0, type = 'gasto';
-    if (amounts.length >= 2) {
-      // Cargo/Abono pattern: one is the movement, last is likely saldo
+    if (amounts.length >= 3) {
+      // 3+ amounts: likely Cargo, Abono, Saldo (ignore saldo = last)
+      var cargo = amounts[0];
+      var abono = amounts[1];
+      if (cargo > 0 && abono === 0) { amount = cargo; type = 'gasto'; }
+      else if (abono > 0 && cargo === 0) { amount = abono; type = 'ingreso'; }
+      else if (cargo > 0) { amount = cargo; type = 'gasto'; }
+      else { amount = abono; type = 'ingreso'; }
+    } else if (amounts.length === 2) {
+      // 2 amounts: first is movement, second is saldo (skip saldo)
       amount = amounts[0];
-      // Check if second amount could be abono (first is 0 = no cargo)
       if (amounts[0] === 0 && amounts[1] > 0) { amount = amounts[1]; type = 'ingreso'; }
     } else {
       amount = Math.abs(amounts[0]);
-      if (amounts[0] < 0) type = 'ingreso'; // negative = payment/deposit in some formats
+      if (amounts[0] < 0) type = 'ingreso';
     }
     if (amount === 0) continue;
 
