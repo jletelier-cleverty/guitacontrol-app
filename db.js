@@ -76,7 +76,8 @@ async function loadTransactions() {
     return {
       id: t.id, date: t.date, description: t.description,
       amount: t.amount, type: t.type, source: t.source,
-      category: t.category || '', month: t.month
+      category: t.category || '', month: t.month,
+      batch_id: t.batch_id || null
     };
   });
 }
@@ -87,7 +88,8 @@ async function saveTransactionsBatch(txList) {
     return {
       id: tx.id, user_id: currentUser.id, date: tx.date,
       description: tx.description, amount: tx.amount, type: tx.type,
-      source: tx.source, category: tx.category || '', month: tx.month
+      source: tx.source, category: tx.category || '', month: tx.month,
+      batch_id: tx.batch_id || null
     };
   });
   await sb.from('transactions').upsert(rows, { onConflict: 'id' });
@@ -293,6 +295,68 @@ async function saveCompanyDB(c) {
 async function deleteCompanyDB(id) {
   if (window.DEMO_MODE) return;
   await sb.from('companies').delete().eq('id', id);
+}
+
+// ---- BANK FORMATS (auto-learning) ----
+async function loadBankFormats() {
+  if (window.DEMO_MODE) return [];
+  var { data } = await sb.from('bank_formats').select('*').order('times_used', { ascending: false });
+  return data || [];
+}
+
+async function saveBankFormat(format) {
+  if (window.DEMO_MODE) return;
+  await sb.from('bank_formats').insert({
+    bank_name: format.bank_name,
+    fingerprint_keywords: format.fingerprint_keywords,
+    column_mapping: format.column_mapping || {},
+    date_format: format.date_format || '',
+    source_type: format.source_type || 'banco',
+    sample_headers: format.sample_headers || [],
+    times_used: 1
+  });
+}
+
+async function incrementBankFormatUsage(id) {
+  if (window.DEMO_MODE) return;
+  await sb.rpc('increment_bank_format_usage', { format_id: id }).catch(function() {
+    // Fallback: just update directly
+    sb.from('bank_formats').update({ times_used: sb.raw('times_used + 1'), updated_at: new Date().toISOString() }).eq('id', id);
+  });
+}
+
+// ---- IMPORT LOGS ----
+async function logImport(data) {
+  if (window.DEMO_MODE) return;
+  await sb.from('import_logs').insert({
+    user_id: currentUser.id,
+    file_name: data.file_name || '',
+    detected_bank: data.detected_bank || '',
+    parser_used: data.parser_used || 'rules',
+    transactions_found: data.transactions_found || 0,
+    success: data.success || false,
+    error_message: data.error_message || null,
+    text_preview: (data.text_preview || '').substring(0, 500).replace(/\d{5,}/g, '***')
+  }).catch(function(e) { console.warn('logImport error:', e); });
+}
+
+// ---- AI PARSE (Edge Function) ----
+async function callAIParse(text, fileName) {
+  var session = await sb.auth.getSession();
+  var token = session.data.session ? session.data.session.access_token : '';
+  var resp = await fetch(SUPABASE_URL + '/functions/v1/parse-statement', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({ text: text, file_name: fileName })
+  });
+  if (!resp.ok) {
+    var errBody = await resp.text();
+    throw new Error('AI parse failed: ' + resp.status + ' ' + errBody);
+  }
+  return await resp.json();
 }
 
 // ---- INVESTOR PROFILE (stored in profiles table) ----

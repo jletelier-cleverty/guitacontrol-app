@@ -396,6 +396,14 @@
           <div id="importStatus" class="import-status"></div>
         </div>
 
+        <!-- Modal mapeo manual (Capa 3) -->
+        <div id="manualMappingModal" class="manual-mapping-overlay">
+          <div class="manual-mapping-modal">
+            <h3>Mapeo manual de columnas</h3>
+            <div id="manualMappingContent"></div>
+          </div>
+        </div>
+
         <div class="import-card" style="margin-top:24px">
           <h3>Integraciones API con Bancos</h3>
           <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px">Conecta tu banco y sincroniza tus movimientos automaticamente. Sin archivos, sin esfuerzo.</p>
@@ -441,6 +449,12 @@
               <span class="bank-status">Pronto</span>
             </div>
           </div>
+        </div>
+
+        <div class="import-card" style="margin-top:24px">
+          <h3>Historial de importaciones</h3>
+          <p style="color:var(--text-secondary);font-size:0.83rem;margin-bottom:12px">Puedes eliminar todas las transacciones de una importacion especifica.</p>
+          <div id="importHistoryList"></div>
         </div>
 
         <div class="import-card" style="margin-top:24px">

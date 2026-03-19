@@ -178,13 +178,8 @@ function parseCMRExcel(workbook) {
   for (var i = headerRow + 1; i < raw.length; i++) {
     var row = raw[i];
     if (!row || row[colFecha] === undefined || row[colFecha] === null) continue;
-    var dateObj;
-    if (typeof row[colFecha] === 'number') {
-      dateObj = new Date((row[colFecha] - 25569) * 86400000);
-    } else {
-      dateObj = new Date(row[colFecha]);
-    }
-    if (isNaN(dateObj.getTime())) continue;
+    var dateObj = parseFlexDate(row[colFecha]);
+    if (!dateObj) continue;
     var desc = cleanDescCMR(String(row[colDesc] || ''));
     if (!desc) continue;
     var monto = Math.abs(parseInt(row[colMonto]) || 0);
@@ -193,7 +188,10 @@ function parseCMRExcel(workbook) {
     if (colValorCuota >= 0 && row[colValorCuota] !== undefined) {
       isPay = Number(row[colValorCuota]) < 0;
     }
-    if (!isPay) isPay = desc.toLowerCase().indexOf('pago tarjeta') >= 0;
+    if (!isPay) isPay = desc.toLowerCase().indexOf('pago tarjeta') >= 0 ||
+                        desc.toLowerCase().indexOf('pago recibido') >= 0 ||
+                        desc.toLowerCase().indexOf('pago ') === 0 ||
+                        Number(row[colMonto]) < 0;
     results.push({
       id: gid(), date: dateObj.toISOString().split('T')[0],
       description: desc, amount: monto,
@@ -485,11 +483,13 @@ function cleanDescBChile(desc) {
 
 // ---- GENERIC FALLBACK PARSER ----
 
-function parseGenericExcel(workbook) {
+function parseGenericExcel(workbook, sourceType) {
   var sheet = workbook.Sheets[workbook.SheetNames[0]];
   var raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
   var results = [];
-  var headerRow = -1, colFecha = -1, colDesc = -1, colMonto = -1, colCargos = -1, colAbonos = -1;
+  var headerRow = -1, colFecha = -1, colDesc = -1, colMonto = -1;
+  var colCargos = -1, colAbonos = -1, colTipo = -1, colCuotas = -1, colValorCuota = -1;
+  var src = sourceType || 'banco';
 
   for (var i = 0; i < Math.min(raw.length, 30); i++) {
     var row = raw[i];
@@ -497,16 +497,23 @@ function parseGenericExcel(workbook) {
     for (var j = 0; j < row.length; j++) {
       var v = String(row[j] || '').trim().toLowerCase();
       if (v === 'fecha' || v === 'date') colFecha = j;
-      if (v.indexOf('descripci') >= 0 || v.indexOf('detalle') >= 0 || v === 'glosa' || v === 'description') colDesc = j;
-      if (v === 'monto' || v === 'amount' || v.indexOf('monto total') >= 0) colMonto = j;
-      if (v.indexOf('cargo') >= 0 && v.indexOf('total') === -1) colCargos = j;
-      if (v.indexOf('abono') >= 0 && v.indexOf('total') === -1) colAbonos = j;
+      if (v.indexOf('descripci') >= 0 || v.indexOf('detalle') >= 0 || v === 'glosa' ||
+          v === 'description' || v === 'comercio') colDesc = j;
+      if (v === 'monto' || v === 'amount' || v.indexOf('monto total') >= 0 || v === 'monto $') colMonto = j;
+      // Cargo/Abono (Banco de Chile, Santander, BCI, Scotiabank, Consorcio)
+      if ((v.indexOf('cargo') >= 0 || v.indexOf('debe') >= 0 || v.indexOf('debito') >= 0 || v === 'débito') && v.indexOf('total') === -1) colCargos = j;
+      if ((v.indexOf('abono') >= 0 || v.indexOf('haber') >= 0 || v.indexOf('credito') >= 0 || v === 'crédito') && v.indexOf('total') === -1) colAbonos = j;
+      // Tipo column (BancoEstado CuentaRUT: Monto + Tipo)
+      if (v === 'tipo') colTipo = j;
+      // Cuotas (TC)
+      if (v === 'cuotas' || v.indexOf('cuota') >= 0 && v.indexOf('valor') === -1) colCuotas = j;
+      if (v.indexOf('valor cuota') >= 0) colValorCuota = j;
     }
     if (colFecha >= 0 && colDesc >= 0 && (colMonto >= 0 || colCargos >= 0 || colAbonos >= 0)) {
       headerRow = i;
       break;
     }
-    colFecha = colDesc = colMonto = colCargos = colAbonos = -1;
+    colFecha = colDesc = colMonto = colCargos = colAbonos = colTipo = colCuotas = colValorCuota = -1;
   }
   if (headerRow === -1) return results;
 
@@ -521,21 +528,50 @@ function parseGenericExcel(workbook) {
     if (!desc) continue;
 
     var amount = 0, type = 'gasto';
-    if (colMonto >= 0) {
-      amount = Math.round(Math.abs(Number(String(row[colMonto]).replace(/[\$\.,\s]/g, '')) || 0));
-      if (Number(String(row[colMonto]).replace(/[\$\.\s]/g, '').replace(',', '.')) < 0) type = 'ingreso';
-    } else {
-      var cargo = colCargos >= 0 ? (Number(row[colCargos]) || 0) : 0;
-      var abono = colAbonos >= 0 ? (Number(row[colAbonos]) || 0) : 0;
+
+    if (colCargos >= 0 || colAbonos >= 0) {
+      // Separated columns: Cargo/Abono, Debe/Haber, Débito/Crédito
+      var cargo = colCargos >= 0 ? (Math.abs(Number(row[colCargos])) || 0) : 0;
+      var abono = colAbonos >= 0 ? (Math.abs(Number(row[colAbonos])) || 0) : 0;
       amount = Math.round(cargo || abono);
-      if (abono > 0) type = 'ingreso';
+      if (abono > 0 && cargo === 0) type = 'ingreso';
+    } else if (colMonto >= 0 && colTipo >= 0) {
+      // Monto + Tipo column (BancoEstado CuentaRUT)
+      amount = Math.round(Math.abs(Number(String(row[colMonto]).replace(/[\$\.,\s]/g, '')) || 0));
+      var tipoVal = String(row[colTipo] || '').toLowerCase().trim();
+      if (tipoVal === 'abono' || tipoVal === 'a' || tipoVal === 'ingreso' || tipoVal === 'credito') type = 'ingreso';
+    } else if (colMonto >= 0) {
+      // Single monto column (BICE style: sign indicates type)
+      var rawMonto = Number(String(row[colMonto]).replace(/[\$\.\s]/g, '').replace(',', '.'));
+      amount = Math.round(Math.abs(rawMonto || 0));
+      if (rawMonto > 0) {
+        // Positive = could be ingreso (BICE) or gasto depending on context
+        // Check for "Abono" in categoria or description
+        var catCol = -1;
+        for (var j = 0; j < row.length; j++) {
+          var hv = String((raw[headerRow] || [])[j] || '').toLowerCase();
+          if (hv.indexOf('categor') >= 0) { catCol = j; break; }
+        }
+        if (catCol >= 0 && String(row[catCol] || '').toLowerCase().indexOf('abono') >= 0) type = 'ingreso';
+        else if (desc.toLowerCase().indexOf('abono') >= 0 || desc.toLowerCase().indexOf('sueldo') >= 0 ||
+                 desc.toLowerCase().indexOf('deposito') >= 0 || desc.toLowerCase().indexOf('tef recibida') >= 0) type = 'ingreso';
+      }
+      if (rawMonto < 0) type = 'gasto'; // Negative = gasto
     }
     if (amount === 0) continue;
+
+    // For TC: check if it's a payment
+    if (src === 'tc') {
+      var dl = desc.toLowerCase();
+      if (dl.indexOf('pago') >= 0 || dl.indexOf('abono') >= 0 || (colValorCuota >= 0 && Number(row[colValorCuota]) < 0)) {
+        type = 'ingreso';
+      }
+    }
 
     results.push({
       id: gid(), date: dateObj.toISOString().split('T')[0],
       description: desc, amount: amount, type: type,
-      source: 'banco', category: '',
+      source: src, category: '',
       month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
     });
   }
@@ -624,18 +660,160 @@ async function removeDuplicates() {
 
 // ---- IMPORT ----
 
-async function addParsedTransactions(parsed) {
+async function addParsedTransactions(parsed, batchId) {
   var added = 0, dupes = 0;
   var newTxs = [];
+  var bid = batchId || gid();
   parsed.forEach(function(tx) {
     if (isDuplicate(tx)) { dupes++; return; }
     tx.category = categorize(tx);
+    tx.batch_id = bid;
     transactions.push(tx);
     newTxs.push(tx);
     added++;
   });
   if (newTxs.length > 0) await saveTransactionsBatch(newTxs);
-  return { added: added, dupes: dupes, total: parsed.length };
+  return { added: added, dupes: dupes, total: parsed.length, batch_id: bid };
+}
+
+// ---- GENERIC PDF PARSER (tabular bank statements) ----
+
+function parseGenericPdf(text) {
+  var results = [];
+  var lines = text.split('\n');
+  var dateRegex = /(\d{2}[\/\-]\d{2}[\/\-]\d{4})/;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    var dm = line.match(dateRegex);
+    if (!dm) continue;
+
+    var sep = dm[1].indexOf('/') >= 0 ? '/' : '-';
+    var parts = dm[1].split(sep).map(Number);
+    var dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (isNaN(dateObj.getTime())) continue;
+
+    // After date, collect description + amounts from same line and following lines
+    var afterDate = line.substring(line.indexOf(dm[1]) + dm[1].length).trim();
+    var desc = '', amounts = [];
+
+    // Extract numbers from afterDate
+    var tokens = afterDate.split(/\s+/);
+    for (var t = 0; t < tokens.length; t++) {
+      var cleaned = tokens[t].replace(/[\$]/g, '');
+      // Check if token looks like a Chilean peso amount (digits with dots as thousands)
+      if (/^-?[\d.]+$/.test(cleaned) && cleaned.replace(/\./g, '').length > 0) {
+        var num = parseInt(cleaned.replace(/\./g, '')) || 0;
+        if (num !== 0) amounts.push(num);
+      } else {
+        desc += (desc ? ' ' : '') + tokens[t];
+      }
+    }
+
+    // If not enough info on this line, scan ahead
+    if (amounts.length === 0) {
+      for (var j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+        var nl = lines[j].trim();
+        if (dateRegex.test(nl)) break;
+        var numMatch = nl.match(/^[\$]?\s*-?([\d.]+)\s*$/);
+        if (numMatch) {
+          amounts.push(parseInt(numMatch[1].replace(/\./g, '')) || 0);
+        } else if (!desc && nl && !/^(Fecha|Saldo|Total|Pagina|Movimiento)/i.test(nl)) {
+          desc = nl;
+        }
+      }
+    }
+
+    desc = desc.replace(/\s+/g, ' ').trim();
+    if (!desc || amounts.length === 0) continue;
+
+    // Heuristic: if 2+ amounts, first non-zero is cargo, second is abono (or vice versa)
+    var amount = 0, type = 'gasto';
+    if (amounts.length >= 2) {
+      // Cargo/Abono pattern: one is the movement, last is likely saldo
+      amount = amounts[0];
+      // Check if second amount could be abono (first is 0 = no cargo)
+      if (amounts[0] === 0 && amounts[1] > 0) { amount = amounts[1]; type = 'ingreso'; }
+    } else {
+      amount = Math.abs(amounts[0]);
+      if (amounts[0] < 0) type = 'ingreso'; // negative = payment/deposit in some formats
+    }
+    if (amount === 0) continue;
+
+    // Detect income by keywords
+    var dl = desc.toLowerCase();
+    if (dl.indexOf('abono') >= 0 || dl.indexOf('deposito') >= 0 || dl.indexOf('tef recibida') >= 0 ||
+        dl.indexOf('transferencia recibida') >= 0 || dl.indexOf('sueldo') >= 0 ||
+        dl.indexOf('traspaso de:') >= 0) {
+      type = 'ingreso';
+    }
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount, type: type,
+      source: 'banco', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+  }
+  return results;
+}
+
+// ---- GENERIC TC PDF PARSER (credit card statements) ----
+
+function parseTcGenericPdf(text) {
+  var results = [];
+  var lines = text.split('\n');
+  var dateRegex = /(\d{2}\/\d{2}\/\d{4})/;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    var dm = line.match(dateRegex);
+    if (!dm) continue;
+
+    var parts = dm[1].split('/').map(Number);
+    var dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (isNaN(dateObj.getTime())) continue;
+
+    var afterDate = line.substring(line.indexOf(dm[1]) + dm[1].length).trim();
+    // Try to extract description and amount from same line
+    var desc = '', amount = 0;
+
+    // Pattern: date description amount (with dots as thousand separator)
+    var lineMatch = afterDate.match(/^(.+?)\s+(-?[\d.]+)\s*$/);
+    if (lineMatch) {
+      desc = lineMatch[1].trim();
+      amount = parseInt(lineMatch[2].replace(/\./g, '')) || 0;
+    } else {
+      // Description is everything after date, amount on next line(s)
+      desc = afterDate;
+      for (var j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        var nl = lines[j].trim();
+        if (dateRegex.test(nl)) break;
+        var numMatch = nl.match(/^[\$]?\s*-?([\d.]+)\s*$/);
+        if (numMatch) { amount = parseInt(numMatch[1].replace(/\./g, '')) || 0; break; }
+        // Could be cuotas line (e.g., "1/3"), skip it
+        if (/^\d+\/\d+$/.test(nl)) continue;
+        if (nl && !desc) desc = nl;
+      }
+    }
+
+    // Remove cuotas info from description (e.g., "3 cuotas", "1/6")
+    desc = desc.replace(/\s*\d+\/\d+\s*$/, '').replace(/\s*\d+\s*cuotas?\s*/i, '').trim();
+    desc = desc.replace(/\s+/g, ' ').trim();
+    if (!desc || amount === 0) continue;
+
+    var isPay = amount < 0 || desc.toLowerCase().indexOf('pago') >= 0;
+    if (isPay) amount = Math.abs(amount);
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount,
+      type: isPay ? 'ingreso' : 'gasto',
+      source: 'tc', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0')
+    });
+  }
+  return results;
 }
 
 // Detect bank from file content fingerprints
@@ -645,93 +823,445 @@ function detectBankExcel(workbook) {
   var text = raw.slice(0, 30).map(function(r) { return (r || []).join(' '); }).join(' ').toLowerCase();
   var sheetName = (workbook.SheetNames[0] || '').toLowerCase();
 
-  if (text.indexOf('banco bice') >= 0 || text.indexOf('bice') >= 0) return 'bice';
-  if (text.indexOf('cmr') >= 0 || text.indexOf('falabella') >= 0 || text.indexOf('valor cuota') >= 0) return 'cmr';
-  if (sheetName.indexOf('saldo y mov no facturado') >= 0 || text.indexOf('mov no facturado') >= 0 ||
-      text.indexOf('tipo de tarjeta') >= 0 || text.indexOf('visa signature') >= 0 ||
-      text.indexOf('mastercard') >= 0) return 'visa';
+  // Header text only (first 5 rows) for TC detection - avoid matching transaction descriptions
+  var headerText = raw.slice(0, 5).map(function(r) { return (r || []).join(' '); }).join(' ').toLowerCase();
+
+  // Tarjetas de credito (detectar primero para no confundir con bancos)
+  if (headerText.indexOf('cmr') >= 0 || (headerText.indexOf('falabella') >= 0 && text.indexOf('valor cuota') >= 0)) return 'cmr';
+  if (sheetName.indexOf('saldo y mov no facturado') >= 0 || headerText.indexOf('mov no facturado') >= 0 ||
+      headerText.indexOf('tipo de tarjeta') >= 0 || headerText.indexOf('visa signature') >= 0 ||
+      headerText.indexOf('visa platinum') >= 0 || headerText.indexOf('mastercard') >= 0) return 'visa';
+  if (text.indexOf('cencosud') >= 0 && (text.indexOf('scotiabank') >= 0 || text.indexOf('paris') >= 0 || text.indexOf('jumbo') >= 0)) return 'tc_cencosud';
+  if (text.indexOf('hites') >= 0 && text.indexOf('tarjeta') >= 0) return 'tc_hites';
+  if (text.indexOf('la polar') >= 0 && text.indexOf('tarjeta') >= 0) return 'tc_lapolar';
+  if (text.indexOf('abcdin') >= 0) return 'tc_abcdin';
+  if (text.indexOf('lider') >= 0 && text.indexOf('bci') >= 0 && text.indexOf('tarjeta') >= 0) return 'tc_lider';
+  if (text.indexOf('unimarc') >= 0 || text.indexOf('unicard') >= 0 || text.indexOf('smu') >= 0) return 'tc_unimarc';
+  if (text.indexOf('ripley') >= 0 && text.indexOf('tarjeta') >= 0) return 'tc_ripley';
+
+  // Bancos (orden: mas especifico primero)
   if (text.indexOf('banco de chile') >= 0 || text.indexOf('cargos (clp)') >= 0 ||
       text.indexOf('abonos (clp)') >= 0 || text.indexOf('canal o sucursal') >= 0) return 'bchile';
+  if (text.indexOf('banco bice') >= 0 || (text.indexOf('bice') >= 0 && text.indexOf('categoria') >= 0)) return 'bice';
   if (text.indexOf('santander') >= 0) return 'santander';
   if (text.indexOf('scotiabank') >= 0) return 'scotiabank';
-  if (text.indexOf('bci') >= 0 || text.indexOf('banco credito') >= 0) return 'bci';
+  if (text.indexOf('banco bci') >= 0 || text.indexOf('banco credito') >= 0 ||
+      (text.indexOf('bci') >= 0 && text.indexOf('cartola') >= 0)) return 'bci';
   if (text.indexOf('itau') >= 0 || text.indexOf('itaú') >= 0) return 'itau';
-  if (text.indexOf('estado') >= 0 && text.indexOf('banco') >= 0) return 'estado';
+  if (text.indexOf('bancoestado') >= 0 || text.indexOf('cuentarut') >= 0 ||
+      (text.indexOf('estado') >= 0 && text.indexOf('banco') >= 0)) return 'estado';
+  if (text.indexOf('banco falabella') >= 0) return 'falabella';
+  if (text.indexOf('banco ripley') >= 0) return 'ripley';
+  if (text.indexOf('banco consorcio') >= 0 || text.indexOf('consorcio') >= 0) return 'consorcio';
+  if (text.indexOf('banco internacional') >= 0) return 'internacional';
+
+  // Fintech
+  if (text.indexOf('tenpo') >= 0) return 'tenpo';
+  if (text.indexOf('mercado pago') >= 0) return 'mercadopago';
+  if (text.indexOf('mach') >= 0) return 'mach';
+  if (text.indexOf('global66') >= 0) return 'global66';
+
   return 'desconocido';
 }
 
 function detectBankPdf(text) {
   var t = text.substring(0, 3000).toLowerCase();
-  if (t.indexOf('banco bice') >= 0 || t.indexOf('bice') >= 0) return 'bice';
-  if (t.indexOf('cmr') >= 0 || t.indexOf('falabella') >= 0 || t.indexOf('periodo facturado') >= 0) return 'cmr';
-  if (t.indexOf('mov no facturado') >= 0 || t.indexOf('tipo de tarjeta') >= 0 ||
-      t.indexOf('visa signature') >= 0 || t.indexOf('mastercard') >= 0 ||
-      t.indexOf('cupo disponible') >= 0) return 'visa';
+
+  // Tarjetas de credito primero
+  if (t.indexOf('cmr') >= 0 || (t.indexOf('falabella') >= 0 && (t.indexOf('periodo facturado') >= 0 || t.indexOf('valor cuota') >= 0))) return 'cmr';
+  if ((t.indexOf('mov no facturado') >= 0 || t.indexOf('mov facturado') >= 0) &&
+      (t.indexOf('visa signature') >= 0 || t.indexOf('visa platinum') >= 0 ||
+       t.indexOf('mastercard') >= 0 || t.indexOf('tipo de tarjeta') >= 0)) return 'visa';
+  if (t.indexOf('cencosud') >= 0 && (t.indexOf('scotiabank') >= 0 || t.indexOf('paris') >= 0 ||
+      t.indexOf('jumbo') >= 0 || t.indexOf('easy') >= 0 || t.indexOf('santa isabel') >= 0)) return 'tc_cencosud';
+  if (t.indexOf('tarjeta') >= 0 && t.indexOf('hites') >= 0) return 'tc_hites';
+  if (t.indexOf('tarjeta') >= 0 && t.indexOf('la polar') >= 0) return 'tc_lapolar';
+  if (t.indexOf('abcdin') >= 0) return 'tc_abcdin';
+  if (t.indexOf('lider') >= 0 && t.indexOf('bci') >= 0) return 'tc_lider';
+  if (t.indexOf('unimarc') >= 0 || t.indexOf('unicard') >= 0) return 'tc_unimarc';
+  if (t.indexOf('tarjeta ripley') >= 0 || (t.indexOf('ripley') >= 0 && t.indexOf('cupo') >= 0)) return 'tc_ripley';
+
+  // Bancos
   if (t.indexOf('banco de chile') >= 0 || t.indexOf('cargos (clp)') >= 0 ||
-      t.indexOf('canal o sucursal') >= 0 || t.indexOf('sbif.cl') >= 0) return 'bchile';
-  if (t.indexOf('santander') >= 0) return 'santander';
-  if (t.indexOf('scotiabank') >= 0) return 'scotiabank';
-  if (t.indexOf('bci') >= 0) return 'bci';
+      t.indexOf('canal o sucursal') >= 0 || t.indexOf('cartolas claras') >= 0) return 'bchile';
+  if (t.indexOf('banco bice') >= 0 || (t.indexOf('bice') >= 0 && t.indexOf('categoria') >= 0)) return 'bice';
+  if (t.indexOf('santander') >= 0 && t.indexOf('cuenta corriente') >= 0) return 'santander';
+  if (t.indexOf('scotiabank') >= 0 && t.indexOf('cuenta corriente') >= 0) return 'scotiabank';
+  if ((t.indexOf('banco bci') >= 0 || t.indexOf('banco credito') >= 0) && t.indexOf('cuenta') >= 0) return 'bci';
+  if (t.indexOf('itau') >= 0 || t.indexOf('itaú') >= 0) return 'itau';
+  if (t.indexOf('banco falabella') >= 0 && t.indexOf('cuenta') >= 0) return 'falabella';
+  if (t.indexOf('banco ripley') >= 0) return 'ripley';
+  if (t.indexOf('banco consorcio') >= 0 || (t.indexOf('consorcio') >= 0 && t.indexOf('cuenta') >= 0)) return 'consorcio';
+  if (t.indexOf('banco internacional') >= 0) return 'internacional';
+  // BancoEstado al final para no capturar "Estado de Cuenta" de otros bancos
+  if (t.indexOf('bancoestado') >= 0 || t.indexOf('cuentarut') >= 0 ||
+      (t.indexOf('banco') >= 0 && t.indexOf('estado') >= 0 && t.indexOf('banco de chile') < 0 &&
+       t.indexOf('banco falabella') < 0 && t.indexOf('banco ripley') < 0 &&
+       t.indexOf('banco consorcio') < 0 && t.indexOf('banco internacional') < 0 &&
+       t.indexOf('santander') < 0 && t.indexOf('scotiabank') < 0 &&
+       t.indexOf('bci') < 0 && t.indexOf('itau') < 0)) return 'estado';
+
+  // Fintech
+  if (t.indexOf('tenpo') >= 0) return 'tenpo';
+  if (t.indexOf('mercado pago') >= 0) return 'mercadopago';
+  if (t.indexOf('mach') >= 0) return 'mach';
+  if (t.indexOf('global66') >= 0) return 'global66';
+  if (t.indexOf('copec pay') >= 0) return 'copecpay';
+  if (t.indexOf('dale') >= 0 && t.indexOf('coopeuch') >= 0) return 'dale';
+  if (t.indexOf('fpay') >= 0 || t.indexOf('falabella pay') >= 0) return 'fpay';
+  if (t.indexOf('prex') >= 0) return 'prex';
+
+  // Deteccion generica de TC por keywords comunes en estados de cuenta
+  if (t.indexOf('cupo disponible') >= 0 || t.indexOf('pago minimo') >= 0 ||
+      t.indexOf('mov facturado') >= 0 || t.indexOf('estado de cuenta tarjeta') >= 0 ||
+      t.indexOf('deuda total') >= 0) return 'tc_generica';
+
   return 'desconocido';
 }
 
 var BANK_LABELS = {
-  bice: 'Banco BICE', cmr: 'TC CMR Falabella', visa: 'TC Visa',
+  bice: 'Banco BICE', cmr: 'TC CMR Falabella', visa: 'TC Visa/MC',
   bchile: 'Banco de Chile', santander: 'Banco Santander',
   scotiabank: 'Scotiabank', bci: 'BCI', itau: 'Banco Itaú',
-  estado: 'BancoEstado', desconocido: 'Auto-detectado'
+  estado: 'BancoEstado', falabella: 'Banco Falabella', ripley: 'Banco Ripley',
+  consorcio: 'Banco Consorcio', internacional: 'Banco Internacional',
+  tc_cencosud: 'TC Cencosud Scotiabank', tc_hites: 'TC Hites',
+  tc_lapolar: 'TC La Polar', tc_abcdin: 'TC ABCDIN',
+  tc_lider: 'TC Lider BCI', tc_unimarc: 'TC Unimarc SMU',
+  tc_ripley: 'TC Ripley', tc_generica: 'Tarjeta Credito',
+  tenpo: 'Tenpo', mercadopago: 'Mercado Pago', mach: 'MACH',
+  global66: 'Global66', copecpay: 'Copec Pay', dale: 'Dale Coopeuch',
+  fpay: 'Fpay', prex: 'Prex',
+  desconocido: 'Auto-detectado'
 };
+
+// Determine if a bank code is a credit card (tc) or bank account
+function getSourceType(bank) {
+  var tcBanks = ['cmr','visa','tc_cencosud','tc_hites','tc_lapolar','tc_abcdin',
+                 'tc_lider','tc_unimarc','tc_ripley','tc_generica'];
+  return tcBanks.indexOf(bank) >= 0 ? 'tc' : 'banco';
+}
 
 async function importFile(file) {
   var name = file.name.toLowerCase();
   var isPdf = name.endsWith('.pdf');
+  var rawText = '';
+  var rawRows = null; // For Excel: array of arrays
+  var parsed = [];
+  var bank = 'desconocido';
+  var label = '';
+  var src = 'banco';
+  var parserUsed = 'rules';
 
+  // ===== EXTRACT TEXT / DATA =====
   if (isPdf) {
     var ab = await file.arrayBuffer();
     var pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-    var lineText = '';
     for (var i = 1; i <= pdf.numPages; i++) {
       var page = await pdf.getPage(i);
       var content = await page.getTextContent();
       var lastY = null, line = '';
       content.items.forEach(function(item) {
         var y = Math.round(item.transform[5]);
-        if (lastY !== null && Math.abs(y - lastY) > 3) { lineText += line.trim() + '\n'; line = ''; }
+        if (lastY !== null && Math.abs(y - lastY) > 3) { rawText += line.trim() + '\n'; line = ''; }
         line += item.str + ' '; lastY = y;
       });
-      lineText += line.trim() + '\n';
+      rawText += line.trim() + '\n';
     }
-    var bank = detectBankPdf(lineText);
-    var label = BANK_LABELS[bank] || bank;
-    var parsed = [];
-    // Route to specific parser ONLY when bank is positively detected
-    if (bank === 'bchile') parsed = parseBChilePdf(lineText);
-    else if (bank === 'visa') parsed = parseVisaPdf(lineText);
-    else if (bank === 'cmr') parsed = parseCMRPdf(lineText);
-    else if (bank === 'bice') parsed = parseBChilePdf(lineText); // BICE PDF uses similar format
-    // If bank not detected or specific parser failed, try all PDF parsers
-    if (parsed.length === 0) { parsed = parseBChilePdf(lineText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
-    if (parsed.length === 0) { parsed = parseVisaPdf(lineText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
-    if (parsed.length === 0) { parsed = parseCMRPdf(lineText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
-    return { results: await addParsedTransactions(parsed), source: label };
+    bank = detectBankPdf(rawText);
   } else {
     var ab = await file.arrayBuffer();
     var wb = XLSX.read(ab, { type: 'array' });
-    var bank = detectBankExcel(wb);
-    var label = BANK_LABELS[bank] || bank;
-    var parsed = [];
-    // Route to specific parser ONLY when bank is positively detected
+    bank = detectBankExcel(wb);
+    // Extract raw rows for manual mapping fallback
+    var sheet = wb.Sheets[wb.SheetNames[0]];
+    rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    // Also build text representation for AI fallback
+    rawText = rawRows.map(function(r) { return r.join('\t'); }).join('\n');
+  }
+
+  label = BANK_LABELS[bank] || bank;
+  src = getSourceType(bank);
+
+  // ===== CAPA 1: Parser de reglas (gratis, <100ms) =====
+  if (isPdf) {
+    if (bank === 'bchile') parsed = parseBChilePdf(rawText);
+    else if (bank === 'visa') parsed = parseVisaPdf(rawText);
+    else if (bank === 'cmr') parsed = parseCMRPdf(rawText);
+    else if (bank === 'bice') parsed = parseBChilePdf(rawText);
+    else if (src === 'tc') parsed = parseTcGenericPdf(rawText);
+    else if (bank !== 'desconocido') parsed = parseGenericPdf(rawText);
+
+    // Fallback chain
+    if (parsed.length === 0) { parsed = parseGenericPdf(rawText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado (Banco)'; }
+    if (parsed.length === 0) { parsed = parseTcGenericPdf(rawText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado (TC)'; }
+    if (parsed.length === 0) { parsed = parseBChilePdf(rawText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
+    if (parsed.length === 0) { parsed = parseVisaPdf(rawText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
+    if (parsed.length === 0) { parsed = parseCMRPdf(rawText); if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado'; }
+  } else {
     if (bank === 'bice') parsed = parseBICE(wb);
     else if (bank === 'cmr') parsed = parseCMRExcel(wb);
     else if (bank === 'visa') parsed = parseVisaExcel(wb);
     else if (bank === 'bchile') parsed = parseBChileExcel(wb);
-    // If bank not detected or specific parser failed, use generic first
+    else if (bank !== 'desconocido') parsed = parseGenericExcel(wb, src);
+
     if (parsed.length === 0) {
-      parsed = parseGenericExcel(wb);
+      parsed = parseGenericExcel(wb, src);
       if (parsed.length > 0 && bank === 'desconocido') label = 'Auto-detectado';
     }
-    if (parsed.length === 0) return { results: { added: 0, dupes: 0, total: 0 }, source: 'No reconocido' };
-    return { results: await addParsedTransactions(parsed), source: label };
+  }
+
+  // Set source type
+  if (parsed.length > 0) {
+    if (src === 'tc') parsed.forEach(function(tx) { tx.source = 'tc'; });
+    else if (bank !== 'desconocido') parsed.forEach(function(tx) { tx.source = 'banco'; });
+  }
+
+  // ===== CAPA 2: Claude AI via Edge Function (~$0.01, ~2 seg) =====
+  if (parsed.length === 0 && rawText.length > 50) {
+    parserUsed = 'ai';
+    var statusEl = document.getElementById('importStatus');
+    if (statusEl) {
+      statusEl.innerHTML = '<span class="ai-parsing-indicator"><span class="ai-spinner"></span> Analizando con IA...</span>';
+      statusEl.className = 'import-status';
+    }
+    try {
+      var aiResult = await callAIParse(rawText, file.name);
+      if (aiResult && aiResult.transactions && aiResult.transactions.length > 0) {
+        var aiBank = aiResult.bank || 'IA';
+        var aiSrc = aiResult.account_type === 'tarjeta_credito' ? 'tc' : 'banco';
+        label = aiBank + ' (IA)';
+        parsed = aiResult.transactions.map(function(t) {
+          return {
+            date: t.date || '',
+            description: t.description || '',
+            amount: Math.abs(parseInt(t.amount) || 0),
+            type: t.type === 'ingreso' ? 'ingreso' : 'gasto',
+            source: aiSrc
+          };
+        }).filter(function(t) { return t.date && t.amount > 0; });
+
+        // Auto-learning: save bank format for future rule-based parsing
+        if (parsed.length > 0 && aiResult.fingerprint_keywords && aiResult.fingerprint_keywords.length > 0) {
+          saveBankFormat({
+            bank_name: aiBank,
+            fingerprint_keywords: aiResult.fingerprint_keywords,
+            column_mapping: aiResult.column_mapping || {},
+            date_format: aiResult.date_format || '',
+            source_type: aiSrc,
+            sample_headers: []
+          }).catch(function(e) { console.warn('saveBankFormat error:', e); });
+        }
+      }
+    } catch (aiErr) {
+      console.warn('AI parse failed:', aiErr);
+    }
+  }
+
+  // ===== CAPA 3: Mapeo manual con preview =====
+  if (parsed.length === 0) {
+    parserUsed = 'manual';
+    var manualResult = await showManualMappingModal(rawRows, rawText, isPdf);
+    if (manualResult && manualResult.length > 0) {
+      parsed = manualResult;
+      label = 'Mapeo manual';
+    }
+  }
+
+  // ===== LOGGING (silencioso, no bloquea) =====
+  logImport({
+    file_name: file.name,
+    detected_bank: bank,
+    parser_used: parserUsed,
+    transactions_found: parsed.length,
+    success: parsed.length > 0,
+    error_message: parsed.length === 0 ? 'No transactions found' : null,
+    text_preview: rawText.substring(0, 500)
+  }).catch(function() {});
+
+  if (parsed.length === 0) {
+    return { results: { added: 0, dupes: 0, total: 0, batch_id: null }, source: 'No reconocido' };
+  }
+
+  var batchId = gid();
+  return { results: await addParsedTransactions(parsed, batchId), source: label, parserUsed: parserUsed };
+}
+
+// ===== MANUAL MAPPING MODAL =====
+function showManualMappingModal(rawRows, rawText, isPdf) {
+  return new Promise(function(resolve) {
+    // Build rows from text if no rawRows (PDF)
+    var rows = rawRows;
+    if (!rows || rows.length < 2) {
+      rows = rawText.split('\n').filter(function(l) { return l.trim(); }).map(function(l) {
+        return l.split(/\t|  +/).map(function(c) { return c.trim(); });
+      });
+    }
+    if (rows.length < 2) { resolve([]); return; }
+
+    // Take first 15 rows for preview
+    var previewRows = rows.slice(0, 15);
+    var maxCols = 0;
+    previewRows.forEach(function(r) { if (r.length > maxCols) maxCols = r.length; });
+    if (maxCols < 2 || maxCols > 20) { resolve([]); return; }
+
+    var modal = document.getElementById('manualMappingModal');
+    var tableHtml = '<table class="manual-map-table"><thead><tr>';
+
+    // Column dropdowns
+    for (var c = 0; c < maxCols; c++) {
+      tableHtml += '<th><select class="manual-col-select" data-col="' + c + '">' +
+        '<option value="ignorar">Ignorar</option>' +
+        '<option value="fecha">Fecha</option>' +
+        '<option value="descripcion">Descripcion</option>' +
+        '<option value="monto">Monto</option>' +
+        '<option value="cargo">Cargo</option>' +
+        '<option value="abono">Abono</option>' +
+        '</select></th>';
+    }
+    tableHtml += '</tr></thead><tbody>';
+
+    // Data rows
+    previewRows.forEach(function(row) {
+      tableHtml += '<tr>';
+      for (var c = 0; c < maxCols; c++) {
+        var val = row[c] != null ? String(row[c]) : '';
+        tableHtml += '<td>' + val.substring(0, 40) + '</td>';
+      }
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table>';
+
+    var content = document.getElementById('manualMappingContent');
+    content.innerHTML =
+      '<p style="margin-bottom:12px;color:var(--text-secondary);font-size:0.85rem">No pudimos leer tu cartola automaticamente. Marca las columnas para importar:</p>' +
+      tableHtml +
+      '<div style="display:flex;gap:12px;margin-top:16px;align-items:center;flex-wrap:wrap">' +
+        '<label style="font-size:0.85rem;font-weight:500">Banco: <input type="text" id="manualBankName" placeholder="Ej: Banco Consorcio" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;width:180px"></label>' +
+        '<label style="font-size:0.85rem;font-weight:500;display:flex;align-items:center;gap:6px"><input type="radio" name="manualSourceType" value="banco" checked> Cuenta</label>' +
+        '<label style="font-size:0.85rem;font-weight:500;display:flex;align-items:center;gap:6px"><input type="radio" name="manualSourceType" value="tc"> Tarjeta</label>' +
+      '</div>' +
+      '<div style="display:flex;gap:12px;margin-top:16px">' +
+        '<button class="btn btn-primary" id="manualMapImportBtn">Importar con este mapeo</button>' +
+        '<button class="btn btn-secondary" id="manualMapCancelBtn">Cancelar</button>' +
+      '</div>';
+
+    // Auto-detect column types from first data rows
+    autoDetectColumns(previewRows, maxCols);
+
+    modal.classList.add('open');
+
+    document.getElementById('manualMapCancelBtn').onclick = function() {
+      modal.classList.remove('open');
+      resolve([]);
+    };
+
+    document.getElementById('manualMapImportBtn').onclick = function() {
+      // Read column mapping
+      var mapping = {};
+      var selects = content.querySelectorAll('.manual-col-select');
+      selects.forEach(function(sel) {
+        var col = parseInt(sel.getAttribute('data-col'));
+        if (sel.value !== 'ignorar') mapping[sel.value] = col;
+      });
+
+      if (!mapping.fecha || (!mapping.monto && !mapping.cargo)) {
+        alert('Debes seleccionar al menos una columna de Fecha y Monto (o Cargo).');
+        return;
+      }
+
+      var sourceType = document.querySelector('input[name="manualSourceType"]:checked').value;
+      var bankName = document.getElementById('manualBankName').value.trim() || 'Manual';
+
+      // Parse all rows (skip obvious header rows)
+      var results = [];
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
+        var dateVal = row[mapping.fecha];
+        if (!dateVal) continue;
+        var d = parseFlexDate(dateVal);
+        if (!d) continue;
+
+        var desc = mapping.descripcion != null ? String(row[mapping.descripcion] || '') : '';
+        var amount = 0;
+        if (mapping.monto != null) {
+          amount = Math.abs(parseFloat(String(row[mapping.monto]).replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0);
+        } else {
+          var cargo = Math.abs(parseFloat(String(row[mapping.cargo] || '0').replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0);
+          var abono = mapping.abono != null ? Math.abs(parseFloat(String(row[mapping.abono] || '0').replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0) : 0;
+          amount = cargo || abono;
+        }
+
+        if (amount <= 0) continue;
+
+        var type = 'gasto';
+        if (mapping.abono != null && mapping.cargo != null) {
+          var cargoVal = Math.abs(parseFloat(String(row[mapping.cargo] || '0').replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0);
+          var abonoVal = Math.abs(parseFloat(String(row[mapping.abono] || '0').replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0);
+          type = (abonoVal > 0 && cargoVal === 0) ? 'ingreso' : 'gasto';
+        } else if (sourceType === 'tc') {
+          type = 'gasto';
+        }
+
+        results.push({
+          date: d, description: desc.trim(), amount: Math.round(amount),
+          type: type, source: sourceType
+        });
+      }
+
+      // Save format for auto-learning
+      if (results.length > 0) {
+        var keywords = [];
+        if (bankName) keywords.push(bankName.toLowerCase());
+        // Extract keywords from first row (likely headers)
+        if (rows[0]) {
+          rows[0].forEach(function(cell) {
+            var v = String(cell).toLowerCase().trim();
+            if (v.length > 2 && v.length < 30) keywords.push(v);
+          });
+        }
+        saveBankFormat({
+          bank_name: bankName,
+          fingerprint_keywords: keywords.slice(0, 6),
+          column_mapping: mapping,
+          date_format: '',
+          source_type: sourceType,
+          sample_headers: rows[0] ? rows[0].map(String) : []
+        }).catch(function() {});
+      }
+
+      modal.classList.remove('open');
+      resolve(results);
+    };
+  });
+}
+
+function autoDetectColumns(previewRows, maxCols) {
+  // Try to guess column types from content
+  var selects = document.querySelectorAll('.manual-col-select');
+  for (var c = 0; c < maxCols; c++) {
+    var dateCount = 0, numCount = 0, textCount = 0;
+    for (var r = 0; r < previewRows.length; r++) {
+      var val = String(previewRows[r][c] || '').trim();
+      if (!val) continue;
+      if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(val) || /^\d{4}-\d{2}-\d{2}$/.test(val) || /^\d{1,2}\s+(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)/i.test(val)) {
+        dateCount++;
+      } else if (/^[\d.,\-$]+$/.test(val.replace(/\s/g, '')) && parseFloat(val.replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.')) > 0) {
+        numCount++;
+      } else if (val.length > 3) {
+        textCount++;
+      }
+    }
+    var total = previewRows.length;
+    var sel = selects[c];
+    if (!sel) continue;
+    if (dateCount > total * 0.3) sel.value = 'fecha';
+    else if (textCount > total * 0.3 && textCount > numCount) sel.value = 'descripcion';
+    else if (numCount > total * 0.3) {
+      // First number column = cargo, second = abono
+      var alreadyHasCargo = Array.from(selects).some(function(s) { return s.value === 'cargo' || s.value === 'monto'; });
+      sel.value = alreadyHasCargo ? 'abono' : 'cargo';
+    }
   }
 }
 
@@ -747,6 +1277,17 @@ async function importFiles(files) {
       totalAdded += r.added;
       totalDupes += r.dupes;
       messages.push(files[i].name + ': ' + r.added + ' nuevas' + (r.dupes > 0 ? ', ' + r.dupes + ' duplicadas' : '') + (r.total === 0 ? ' (formato no reconocido)' : '') + ' [' + result.source + ']');
+      // Guardar en historial de importaciones
+      if (r.added > 0 && r.batch_id) {
+        addImportHistory({
+          batch_id: r.batch_id,
+          file_name: files[i].name,
+          source: result.source,
+          parser_used: result.parserUsed || 'rules',
+          count: r.added,
+          date: new Date().toISOString()
+        });
+      }
     } catch (err) {
       messages.push(files[i].name + ': Error — ' + err.message);
     }
@@ -755,4 +1296,68 @@ async function importFiles(files) {
   statusEl.className = 'import-status success';
   document.getElementById('fileImport').value = '';
   refreshAll();
+  renderImportHistory();
+}
+
+// ===== IMPORT HISTORY =====
+function getImportHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('import_history_' + currentUser.id) || '[]');
+  } catch(e) { return []; }
+}
+
+function addImportHistory(entry) {
+  var history = getImportHistory();
+  history.unshift(entry);
+  localStorage.setItem('import_history_' + currentUser.id, JSON.stringify(history));
+}
+
+function removeImportHistory(batchId) {
+  var history = getImportHistory().filter(function(h) { return h.batch_id !== batchId; });
+  localStorage.setItem('import_history_' + currentUser.id, JSON.stringify(history));
+}
+
+async function deleteImportBatch(batchId) {
+  var batchTxIds = transactions.filter(function(t) { return t.batch_id === batchId; }).map(function(t) { return t.id; });
+  if (batchTxIds.length === 0) { removeImportHistory(batchId); renderImportHistory(); return; }
+  if (!confirm('Eliminar ' + batchTxIds.length + ' transacciones de esta importacion?')) return;
+
+  // Delete from Supabase in batches
+  for (var i = 0; i < batchTxIds.length; i += 100) {
+    var batch = batchTxIds.slice(i, i + 100);
+    await sb.from('transactions').delete().in('id', batch);
+  }
+  // Remove from local array
+  transactions = transactions.filter(function(t) { return t.batch_id !== batchId; });
+  removeImportHistory(batchId);
+  renderImportHistory();
+  refreshAll();
+}
+
+function renderImportHistory() {
+  var container = document.getElementById('importHistoryList');
+  if (!container) return;
+  var history = getImportHistory();
+  if (history.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.82rem">No hay importaciones recientes.</p>';
+    return;
+  }
+  var html = '';
+  history.forEach(function(h) {
+    var d = new Date(h.date);
+    var dateStr = d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+    var timeStr = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    var parserBadge = h.parser_used === 'ai' ? '<span class="import-badge badge-ai">IA</span>' :
+                      h.parser_used === 'manual' ? '<span class="import-badge badge-manual">Manual</span>' : '';
+    html += '<div class="import-history-row">' +
+      '<div class="import-history-info">' +
+        '<strong>' + h.file_name + '</strong> ' + parserBadge +
+        '<small>' + h.source + ' &middot; ' + h.count + ' transacciones &middot; ' + dateStr + ' ' + timeStr + '</small>' +
+      '</div>' +
+      '<button class="btn-icon-delete" onclick="deleteImportBatch(\'' + h.batch_id + '\')" title="Eliminar esta importacion">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>' +
+      '</button>' +
+    '</div>';
+  });
+  container.innerHTML = html;
 }
