@@ -451,6 +451,13 @@ async function initApp() {
   // Render
   refreshAll();
 
+  // Choose initial view based on user state
+  if (transactions.length === 0) {
+    switchView('importar');
+  } else {
+    switchView('dashboard');
+  }
+
   // Demo mode: inject banner and CTAs after render
   if (window.DEMO_MODE && typeof injectDemoUI === 'function') {
     injectDemoUI();

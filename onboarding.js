@@ -76,6 +76,7 @@ async function obFinish() {
   localStorage.setItem('onboarding_done', '1');
   document.getElementById('onboardingWizard').style.display = 'none';
   refreshAll();
+  switchView('importar');
 }
 
 async function obFinishDemo() {
@@ -88,9 +89,9 @@ function renderChecklist() {
 
   var items = [
     { text: 'Importar tu primera cartola', done: transactions.length > 0, view: 'importar', icon: '📄' },
-    { text: 'Categorizar tus gastos', done: transactions.length > 0 && transactions.filter(function(t) { return t.type === 'gasto' && !t.category; }).length === 0, view: 'categorias', icon: '🏷️' },
-    { text: 'Agregar patrimonio', done: (typeof properties !== 'undefined' && properties.length > 0) || (typeof accounts !== 'undefined' && accounts.length > 0), view: 'patrimonio', icon: '🏠' },
-    { text: 'Completar tu perfil', done: profile.age !== 30 || profile.monthlySpend !== 1500000, view: 'ajustes', icon: '👤' }
+    { text: 'Categorizar tus gastos', done: transactions.length > 0 && transactions.filter(function(t) { return t.type === 'gasto' && !t.category; }).length === 0, view: 'transacciones', icon: '🏷️' },
+    { text: 'Ver tu dashboard', done: transactions.length > 0 && transactions.filter(function(t) { return t.type === 'gasto' && !t.category; }).length === 0, view: 'dashboard', icon: '📊' },
+    { text: 'Agregar patrimonio (bonus)', done: (typeof properties !== 'undefined' && properties.length > 0) || (typeof accounts !== 'undefined' && accounts.length > 0), view: 'patrimonio', icon: '🏠' }
   ];
 
   var completed = items.filter(function(i) { return i.done; }).length;
