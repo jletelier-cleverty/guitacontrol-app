@@ -14,6 +14,8 @@ var profile = {
 var properties = [];
 var accounts = [];
 var companies = [];
+var goals = [];
+var debts = [];
 
 var editingTxId = null;
 var editingPropId = null;

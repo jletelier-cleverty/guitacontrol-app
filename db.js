@@ -438,7 +438,7 @@ async function initApp() {
   if (emailEl) emailEl.textContent = currentUser.email;
 
   // Load all data
-  await Promise.all([loadProfile(), loadTransactions(), loadRules(), loadProperties(), loadAccounts(), loadCompanies()]);
+  await Promise.all([loadProfile(), loadTransactions(), loadRules(), loadProperties(), loadAccounts(), loadCompanies(), loadGoals(), loadDebts()]);
 
   // Demo mode: load fake data
   if (window.DEMO_MODE && typeof loadDemoData === 'function') {
