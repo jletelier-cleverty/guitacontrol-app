@@ -15,6 +15,50 @@ function populateCatFilter() {
   sel.value = cur || 'all';
 }
 
+function detectSplitGroups(list) {
+  var splitChildren = {};
+  var splitGroups = {};
+  list.forEach(function(t) {
+    var match = t.description.match(/^(.+) \(parte \d+\)$/);
+    if (match) {
+      var baseDesc = match[1];
+      var parent = list.find(function(p) {
+        return p.id !== t.id && p.date === t.date && p.description === baseDesc;
+      });
+      if (parent) {
+        splitChildren[t.id] = parent.id;
+        if (!splitGroups[parent.id]) splitGroups[parent.id] = [];
+        splitGroups[parent.id].push(t);
+      }
+    }
+  });
+  return { splitChildren: splitChildren, splitGroups: splitGroups };
+}
+
+function renderSplitGroup(parent, children) {
+  var allParts = [parent].concat(children);
+  var totalAmount = allParts.reduce(function(s, p) { return s + p.amount; }, 0);
+  var html = '<tr class="split-parent row-' + parent.type + '">' +
+    '<td class="td-date">' + parent.date + '</td>' +
+    '<td class="td-desc" title="' + parent.description + '">' + trunc(parent.description, 58) + ' <span class="split-badge">Dividida en ' + allParts.length + '</span></td>' +
+    '<td><span class="source-badge source-' + parent.source + '">' + (parent.source==='banco'?'BICE':'CMR') + '</span></td>' +
+    '<td class="' + (parent.type==='gasto'?'amount-negative':'amount-positive') + '" style="opacity:0.5">' + (parent.type==='gasto'?'-':'+') + fmt(totalAmount) + '</td>' +
+    '<td></td></tr>';
+  allParts.forEach(function(p, i) {
+    var c = getCatColor(p.category || 'Sin Categorizar');
+    var excluded = isExcluded(p.category);
+    var isLast = i === allParts.length - 1;
+    var cleanDesc = p.description.replace(/ \(parte \d+\)$/, '');
+    html += '<tr class="split-child' + (isLast ? ' split-child-last' : '') + ' row-' + p.type + (excluded ? ' row-excluded' : '') + '">' +
+      '<td class="td-date"></td>' +
+      '<td class="td-desc split-desc">' + (isLast ? '└' : '├') + ' ' + trunc(cleanDesc, 50) + '</td>' +
+      '<td></td>' +
+      '<td class="' + (p.type==='gasto'?'amount-negative':'amount-positive') + '">' + (p.type==='gasto'?'-':'+') + fmt(p.amount) + '</td>' +
+      '<td><span class="cat-pill" style="background:' + c + '15;color:' + c + ';border:1px solid ' + c + '30" onclick="openCatModal(\'' + p.id + '\')">' + getCatIcon(p.category||'Sin Categorizar') + ' ' + (p.category||'Categorizar') + '</span></td></tr>';
+  });
+  return html;
+}
+
 function renderTransactions() {
   populateCatFilter();
   var filtered = getFilteredAll();
@@ -31,7 +75,23 @@ function renderTransactions() {
   else if (catFilter !== 'all') list = list.filter(function(t) { return t.category === catFilter; });
   list.sort(function(a,b) { return b.date.localeCompare(a.date); });
 
+  var splits = detectSplitGroups(list);
+  var rendered = {};
+
   document.getElementById('txBody').innerHTML = list.map(function(t) {
+    if (rendered[t.id]) return '';
+
+    // Split parent — render group
+    if (splits.splitGroups[t.id]) {
+      rendered[t.id] = true;
+      splits.splitGroups[t.id].forEach(function(ch) { rendered[ch.id] = true; });
+      return renderSplitGroup(t, splits.splitGroups[t.id]);
+    }
+
+    // Split child already rendered with parent
+    if (splits.splitChildren[t.id]) return '';
+
+    // Normal row
     var c = getCatColor(t.category||'Sin Categorizar');
     var excluded = isExcluded(t.category);
     return '<tr class="row-' + t.type + (excluded ? ' row-excluded' : '') + '">' +

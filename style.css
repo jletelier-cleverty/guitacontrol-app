@@ -212,6 +212,14 @@ tbody tr.row-excluded td:first-child { border-left-color: var(--border); }
 .cat-pill:hover { filter: brightness(0.93); }
 .cat-pill.uncategorized { background: var(--yellow-bg); color: var(--yellow); border: 1px dashed #fbbf24; }
 
+/* Split transaction groups */
+.split-parent td { background: var(--bg); border-bottom: none; }
+.split-parent .td-desc { font-weight: 600; font-size: 0.82rem; }
+.split-badge { background: #dbeafe; color: #2563eb; font-size: 0.65rem; padding: 2px 7px; border-radius: 100px; font-weight: 700; margin-left: 6px; letter-spacing: 0.01em; }
+.split-child td { border-bottom: none; padding-top: 4px; padding-bottom: 4px; }
+.split-child-last td { border-bottom: 1px solid var(--border); }
+.split-desc { color: var(--text-secondary); font-size: 0.8rem; padding-left: 28px !important; }
+
 .source-badge {
   display: inline-block; padding: 3px 10px; border-radius: 6px;
   font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
