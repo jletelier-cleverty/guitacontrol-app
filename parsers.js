@@ -161,10 +161,6 @@ function parseDateBICE(str) {
 
 function parseBICEPdf(text) {
   var results = [];
-  // BICE PDF text comes as lines. Transactions follow pattern:
-  // "DD mon YYYY  Cargos/Abonos  NNNNNNN  Description...  $Amount"
-  // or "DD mon YYYY  Cargos/Abonos  -  Description...  $Amount"
-  // Description can span multiple lines before the $Amount at the end.
   var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
   var dateRe = /^(\d{1,2}\s+(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\s+\d{4})/i;
   var i = 0;
@@ -173,60 +169,59 @@ function parseBICEPdf(text) {
 
   while (i < lines.length) {
     var line = lines[i];
+    // Stop at "Saldos diarios"
+    if (/saldos diarios/i.test(line)) break;
+
     var dm = line.match(dateRe);
     if (!dm) { i++; continue; }
 
     var dateObj = parseDateBICE(dm[1]);
     if (!dateObj) { i++; continue; }
 
-    // Rest of line after date
+    // Collect all text from this date line until next date or section break
     var rest = line.substring(dm[0].length).trim();
-
-    // Detect category (Cargos/Abonos)
-    var catMatch = rest.match(/^(Cargos|Abonos)\s+/i);
-    var tipo = 'gasto';
-    if (catMatch) {
-      tipo = catMatch[1].toLowerCase() === 'abonos' ? 'ingreso' : 'gasto';
-      rest = rest.substring(catMatch[0].length).trim();
+    var j = i + 1;
+    while (j < lines.length && j < i + 12) {
+      var nl = lines[j];
+      if (dateRe.test(nl)) break;
+      if (/^(Saldos diarios|Página \d|©)/.test(nl)) break;
+      rest += ' ' + nl;
+      j++;
     }
+    i = j;
 
-    // Skip N° operación (digits or dash)
-    rest = rest.replace(/^[\d-]+\s+/, '');
+    // Detect category anywhere in the collected text
+    var tipo = 'gasto';
+    if (/\bAbonos?\b/i.test(rest)) tipo = 'ingreso';
 
-    // Collect description across lines until we find $Amount
-    var fullDesc = rest;
+    // Remove category label
+    rest = rest.replace(/\b(Cargos|Abonos)\b\s*/gi, '');
+
+    // Skip N° operación (digits or dash at start)
+    rest = rest.replace(/^\s*[\d-]+\s+/, '').replace(/\s+/g, ' ').trim();
+
+    // Extract amount: find $NNN.NNN pattern
     var amount = 0;
-    var amountMatch = fullDesc.match(/\$\s*([\d.,]+)\s*$/);
+    var amountMatch = rest.match(/\$\s*([\d.]+(?:,\d+)?)\s*$/);
     if (amountMatch) {
       amount = parseInt(amountMatch[1].replace(/[.,\s]/g, '')) || 0;
-      fullDesc = fullDesc.substring(0, fullDesc.lastIndexOf('$')).trim();
+      rest = rest.substring(0, rest.lastIndexOf('$')).trim();
     }
-
-    // If no amount yet, scan next lines
-    if (!amount) {
-      var j = i + 1;
-      while (j < lines.length && j < i + 8) {
-        var nl = lines[j];
-        if (dateRe.test(nl)) break;
-        if (/^(Saldos diarios|Página|©)/.test(nl)) break;
-        amountMatch = nl.match(/\$\s*([\d.,]+)\s*$/);
-        if (amountMatch) {
-          amount = parseInt(amountMatch[1].replace(/[.,\s]/g, '')) || 0;
-          fullDesc += ' ' + nl.substring(0, nl.lastIndexOf('$')).trim();
-          j++;
-          break;
-        }
-        fullDesc += ' ' + nl;
-        j++;
+    if (!amountMatch) {
+      // Try any $amount in the text
+      var allAmounts = rest.match(/\$\s*[\d.]+/g);
+      if (allAmounts && allAmounts.length > 0) {
+        var lastAmt = allAmounts[allAmounts.length - 1];
+        amount = parseInt(lastAmt.replace(/[\$.,\s]/g, '')) || 0;
+        rest = rest.substring(0, rest.lastIndexOf(lastAmt)).trim();
       }
-      i = j;
-    } else {
-      i++;
     }
 
-    if (!amount || !fullDesc) continue;
-    // Stop at "Saldos diarios" section
-    if (/saldos diarios/i.test(fullDesc)) break;
+    if (!amount) continue;
+
+    // Clean remaining $ amounts from description (embedded monto values)
+    var fullDesc = rest.replace(/\$\s*[\d.,]+/g, '').replace(/\s+/g, ' ').trim();
+    if (!fullDesc) continue;
 
     var desc = cleanDesc(fullDesc);
     if (!desc) continue;
