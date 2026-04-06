@@ -15,6 +15,7 @@ function refreshAll() {
   try { renderChecklist(); } catch(e) { console.error('refreshAll > renderChecklist:', e); }
   try { if (typeof checkSavedInvestorProfile === 'function') checkSavedInvestorProfile(); } catch(e) { console.error('refreshAll > checkSavedInvestorProfile:', e); }
   try { if (typeof renderImportHistory === 'function') renderImportHistory(); } catch(e) { console.error('refreshAll > renderImportHistory:', e); }
+  try { if (typeof renderDeudas === 'function') renderDeudas(); } catch(e) { console.error('refreshAll > renderDeudas:', e); }
 }
 
 // Start app — check auth + load from Supabase

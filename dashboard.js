@@ -146,7 +146,7 @@ function renderDashboard() {
   var top = gastosReales.slice().sort(function(a,b) { return b.amount - a.amount; }).slice(0, 8);
   topDiv.innerHTML = top.map(function(t) {
     return '<div class="top-item"><span class="top-icon">' + getCatIcon(t.category || 'Sin Categorizar') + '</span>' +
-      '<div class="top-info"><span class="top-desc">' + trunc(t.description, 45) + '</span><span class="top-date">' + t.date + '</span></div>' +
+      '<div class="top-info"><span class="top-desc">' + t.description + '</span><span class="top-date">' + t.date + '</span></div>' +
       '<span class="top-cat" style="background:' + getCatColor(t.category||'Sin Categorizar') + '15;color:' + getCatColor(t.category||'Sin Categorizar') + '">' + (t.category || 'Sin Cat.') + '</span>' +
       '<span class="top-amount">-' + fmt(t.amount) + '</span></div>';
   }).join('');
@@ -177,7 +177,7 @@ function renderDashboard() {
         '<div><span style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">' + diffLabel + '</span><br><strong class="' + diffClass + '" style="font-size:1.1rem">' + fmt(diff) + '</strong></div></div>' +
         '<div class="top-gastos">' + allTxs.map(function(t) {
           return '<div class="top-item"><span class="top-icon">' + (t.type === 'ingreso' ? '\u{1F4E5}' : '\u{1F4E4}') + '</span>' +
-            '<div class="top-info"><span class="top-desc">' + trunc(t.description, 50) + '</span>' +
+            '<div class="top-info"><span class="top-desc">' + t.description + '</span>' +
             '<span class="top-date">' + t.date + ' - ' + (t.source === 'banco' ? 'BICE' : 'CMR') + '</span></div>' +
             '<span class="' + (t.type==='ingreso'?'amount-positive':'amount-negative') + '">' + (t.type==='ingreso'?'+':'-') + fmt(t.amount) + '</span></div>';
         }).join('') + '</div></div>';

@@ -7,6 +7,7 @@ var navTitles = {
   transacciones:['Transacciones','Detalle de movimientos'],
   patrimonio:['Patrimonio','Inversiones, ahorro y proyeccion'],
   dashboard:['Dashboard','Resumen de tus finanzas'],
+  deudas:['Deudas','Controla lo que debes y lo que te deben'],
   estrategia:['Mi Estrategia','Perfil de inversionista y portafolio sugerido'],
   ajustes:['Ajustes','Configuracion, reglas y categorizacion']
 };

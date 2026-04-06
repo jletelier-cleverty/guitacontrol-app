@@ -97,8 +97,14 @@ async function saveTransactionsBatch(txList) {
 
 async function updateTransaction(tx) {
   await sb.from('transactions').update({
-    category: tx.category || '', month: tx.month, amount: tx.amount
+    category: tx.category || '', month: tx.month, amount: tx.amount,
+    source: tx.source || 'banco'
   }).eq('id', tx.id);
+}
+
+async function deleteTransaction(id) {
+  await sb.from('transactions').delete().eq('id', id);
+  transactions = transactions.filter(function(t) { return t.id !== id; });
 }
 
 async function deleteAllTransactions() {

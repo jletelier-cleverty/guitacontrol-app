@@ -159,6 +159,88 @@ function parseDateBICE(str) {
   return (isNaN(d) || mo === undefined || isNaN(y)) ? null : new Date(y, mo, d);
 }
 
+function parseBICEPdf(text) {
+  var results = [];
+  // BICE PDF text comes as lines. Transactions follow pattern:
+  // "DD mon YYYY  Cargos/Abonos  NNNNNNN  Description...  $Amount"
+  // or "DD mon YYYY  Cargos/Abonos  -  Description...  $Amount"
+  // Description can span multiple lines before the $Amount at the end.
+  var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+  var dateRe = /^(\d{1,2}\s+(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\s+\d{4})/i;
+  var i = 0;
+  // Skip header until "Abonos y cargos"
+  while (i < lines.length && !/abonos y cargos/i.test(lines[i])) i++;
+
+  while (i < lines.length) {
+    var line = lines[i];
+    var dm = line.match(dateRe);
+    if (!dm) { i++; continue; }
+
+    var dateObj = parseDateBICE(dm[1]);
+    if (!dateObj) { i++; continue; }
+
+    // Rest of line after date
+    var rest = line.substring(dm[0].length).trim();
+
+    // Detect category (Cargos/Abonos)
+    var catMatch = rest.match(/^(Cargos|Abonos)\s+/i);
+    var tipo = 'gasto';
+    if (catMatch) {
+      tipo = catMatch[1].toLowerCase() === 'abonos' ? 'ingreso' : 'gasto';
+      rest = rest.substring(catMatch[0].length).trim();
+    }
+
+    // Skip N° operación (digits or dash)
+    rest = rest.replace(/^[\d-]+\s+/, '');
+
+    // Collect description across lines until we find $Amount
+    var fullDesc = rest;
+    var amount = 0;
+    var amountMatch = fullDesc.match(/\$\s*([\d.,]+)\s*$/);
+    if (amountMatch) {
+      amount = parseInt(amountMatch[1].replace(/[.,\s]/g, '')) || 0;
+      fullDesc = fullDesc.substring(0, fullDesc.lastIndexOf('$')).trim();
+    }
+
+    // If no amount yet, scan next lines
+    if (!amount) {
+      var j = i + 1;
+      while (j < lines.length && j < i + 8) {
+        var nl = lines[j];
+        if (dateRe.test(nl)) break;
+        if (/^(Saldos diarios|Página|©)/.test(nl)) break;
+        amountMatch = nl.match(/\$\s*([\d.,]+)\s*$/);
+        if (amountMatch) {
+          amount = parseInt(amountMatch[1].replace(/[.,\s]/g, '')) || 0;
+          fullDesc += ' ' + nl.substring(0, nl.lastIndexOf('$')).trim();
+          j++;
+          break;
+        }
+        fullDesc += ' ' + nl;
+        j++;
+      }
+      i = j;
+    } else {
+      i++;
+    }
+
+    if (!amount || !fullDesc) continue;
+    // Stop at "Saldos diarios" section
+    if (/saldos diarios/i.test(fullDesc)) break;
+
+    var desc = cleanDesc(fullDesc);
+    if (!desc) continue;
+
+    results.push({
+      id: gid(), date: dateObj.toISOString().split('T')[0],
+      description: desc, amount: amount, type: tipo,
+      source: 'banco', category: '',
+      month: dateObj.getFullYear() + '-' + String(dateObj.getMonth()+1).padStart(2,'0')
+    });
+  }
+  return results;
+}
+
 function parseCMRExcel(workbook) {
   var sheet = workbook.Sheets[workbook.SheetNames[0]];
   var raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -616,12 +698,47 @@ function cleanDescVisa(desc) {
 }
 
 function cleanDesc(desc) {
-  return desc.replace(/\s+/g, ' ')
+  var d = desc.replace(/\s+/g, ' ').trim();
+
+  // Transferencias BICE: extraer destinatario
+  // "Transferencia de REMITENTE Rut XXX desde Banco BICE a DESTINATARIO Rut XXX a Cuenta ... de BANCO, el FECHA"
+  var tef = d.match(/(?:desde Banco \w+|desde BICE)\s+a\s+(.+?)\s+Rut\s/i);
+  if (tef) {
+    var banco = d.match(/a Cuenta (?:Corriente|Vista) de (.+?)(?:,|\s*el\s)/i);
+    return 'TEF a ' + tef[1].trim() + (banco ? ' (' + banco[1].trim() + ')' : '');
+  }
+
+  // Abono por transferencia: "Abono por transferencia de REMITENTE Rut XXX desde Banco XXX el FECHA"
+  var abono = d.match(/Abono por transferencia de\s+(.+?)\s+Rut\s/i);
+  if (abono) {
+    var bancoOrig = d.match(/desde (?:Banco\s+)?(.+?)(?:\s+el\s)/i);
+    return 'TEF de ' + abono[1].trim() + (bancoOrig ? ' (' + bancoOrig[1].trim() + ')' : '');
+  }
+
+  // Cargo por transferencia a Tarjeta: "Cargo por transferencia a Tarjeta CMR Rut XXX..."
+  var tarjeta = d.match(/Cargo por transferencia a Tarjeta\s+(\w+)/i);
+  if (tarjeta) return 'Pago Tarjeta ' + tarjeta[1];
+
+  // Cargo por pago: "Cargo por pago EMPRESA Portal EXP... via internet, boleta N XXX a las FECHA"
+  var pago = d.match(/Cargo por pago\s+(.+?)(?:\s+Portal\s)/i);
+  if (pago) return 'Pago ' + pago[1].trim();
+
+  // Pago de Crédito
+  var credito = d.match(/Pago de Cr[eé]dito/i);
+  if (credito) return d.replace(/\s*\(N\.\s*Ref:.*\)/, '').trim();
+
+  // Fallback: limpiar basura genérica
+  return d
     .replace(/Rut\s*\d+[\.\-\dkK]+/gi, '')
     .replace(/el \d{4}-\d{2}-\d{2} a las \d{2}:\d{2}(:\d{2})?\s*hrs\.?/gi, '')
     .replace(/el \d{2}\/\d{2}\/\d{4}\s*(a las)?\s*\d{2}:\d{2}/gi, '')
+    .replace(/el \d{2}:\d{2},?\s*monto\s*[\d\.,]+\.?/gi, '')
+    .replace(/,?\s*monto\s*[\d\.,]+\.?/gi, '')
+    .replace(/a las \d{2}\/\d{2}\/\d{4}\s*el\s*\d{2}:\d{2}/gi, '')
     .replace(/desde Banco BICE/gi, '')
-    .replace(/a Cuenta (Corriente|Vista) de [^,]+,?/gi, '')
+    .replace(/a Cuenta (?:Corriente|Vista) de [^,]+,?/gi, '')
+    .replace(/Portal\s+EXP\d+\s*via internet,?\s*/gi, '')
+    .replace(/,?\s*boleta\s+N\s*\d+/gi, '')
     .replace(/\s+/g, ' ').trim();
 }
 
@@ -1018,7 +1135,7 @@ async function importFile(file) {
     if (bank === 'bchile') parsed = parseBChilePdf(rawText);
     else if (bank === 'visa') parsed = parseVisaPdf(rawText);
     else if (bank === 'cmr') parsed = parseCMRPdf(rawText);
-    else if (bank === 'bice') parsed = parseBChilePdf(rawText);
+    else if (bank === 'bice') parsed = parseBICEPdf(rawText);
     else if (src === 'tc') parsed = parseTcGenericPdf(rawText);
     else if (bank !== 'desconocido') parsed = parseGenericPdf(rawText);
 

@@ -40,10 +40,10 @@ function renderSplitGroup(parent, children) {
   var totalAmount = allParts.reduce(function(s, p) { return s + p.amount; }, 0);
   var html = '<tr class="split-parent row-' + parent.type + '">' +
     '<td class="td-date">' + parent.date + '</td>' +
-    '<td class="td-desc" title="' + parent.description + '">' + trunc(parent.description, 58) + ' <span class="split-badge">Dividida en ' + allParts.length + '</span></td>' +
-    '<td><span class="source-badge source-' + parent.source + '">' + (parent.source==='banco'?'BICE':'CMR') + '</span></td>' +
+    '<td class="td-desc" title="' + parent.description + '">' + parent.description + ' <span class="split-badge">Dividida en ' + allParts.length + '</span></td>' +
+    '<td><span class="source-badge source-' + parent.source + '" onclick="toggleTxSource(\'' + parent.id + '\')" title="Click para cambiar">' + (parent.source==='banco'?'BICE':'CMR') + '</span></td>' +
     '<td class="' + (parent.type==='gasto'?'amount-negative':'amount-positive') + '" style="opacity:0.5">' + (parent.type==='gasto'?'-':'+') + fmt(totalAmount) + '</td>' +
-    '<td></td></tr>';
+    '<td><button class="btn-tx-delete" onclick="removeTx(\'' + parent.id + '\')" title="Eliminar">&times;</button></td></tr>';
   allParts.forEach(function(p, i) {
     var c = getCatColor(p.category || 'Sin Categorizar');
     var excluded = isExcluded(p.category);
@@ -51,7 +51,7 @@ function renderSplitGroup(parent, children) {
     var cleanDesc = p.description.replace(/ \(parte \d+\)$/, '');
     html += '<tr class="split-child' + (isLast ? ' split-child-last' : '') + ' row-' + p.type + (excluded ? ' row-excluded' : '') + '">' +
       '<td class="td-date"></td>' +
-      '<td class="td-desc split-desc">' + (isLast ? '└' : '├') + ' ' + trunc(cleanDesc, 50) + '</td>' +
+      '<td class="td-desc split-desc">' + (isLast ? '└' : '├') + ' ' + cleanDesc + '</td>' +
       '<td></td>' +
       '<td class="' + (p.type==='gasto'?'amount-negative':'amount-positive') + '">' + (p.type==='gasto'?'-':'+') + fmt(p.amount) + '</td>' +
       '<td><span class="cat-pill" style="background:' + c + '15;color:' + c + ';border:1px solid ' + c + '30" onclick="openCatModal(\'' + p.id + '\')">' + getCatIcon(p.category||'Sin Categorizar') + ' ' + (p.category||'Categorizar') + '</span></td></tr>';
@@ -96,10 +96,11 @@ function renderTransactions() {
     var excluded = isExcluded(t.category);
     return '<tr class="row-' + t.type + (excluded ? ' row-excluded' : '') + '">' +
       '<td class="td-date">' + t.date + '</td>' +
-      '<td class="td-desc" title="' + t.description + '">' + trunc(t.description, 65) + '</td>' +
-      '<td><span class="source-badge source-' + t.source + '">' + (t.source==='banco'?'BICE':'CMR') + '</span></td>' +
+      '<td class="td-desc" title="' + t.description + '">' + t.description + '</td>' +
+      '<td><span class="source-badge source-' + t.source + '" onclick="toggleTxSource(\'' + t.id + '\')" title="Click para cambiar">' + (t.source==='banco'?'BICE':'CMR') + '</span></td>' +
       '<td class="' + (t.type==='gasto'?'amount-negative':'amount-positive') + '">' + (t.type==='gasto'?'-':'+') + fmt(t.amount) + '</td>' +
-      '<td><span class="cat-pill" style="background:' + c + '15;color:' + c + ';border:1px solid ' + c + '30" onclick="openCatModal(\'' + t.id + '\')">' + getCatIcon(t.category||'Sin Categorizar') + ' ' + (t.category||'Categorizar') + '</span></td></tr>';
+      '<td class="td-actions"><span class="cat-pill" style="background:' + c + '15;color:' + c + ';border:1px solid ' + c + '30" onclick="openCatModal(\'' + t.id + '\')">' + getCatIcon(t.category||'Sin Categorizar') + ' ' + (t.category||'Categorizar') + '</span>' +
+      '<button class="btn-tx-delete" onclick="removeTx(\'' + t.id + '\')" title="Eliminar transaccion">&times;</button></td></tr>';
   }).join('');
 }
 
@@ -129,11 +130,26 @@ function renderRevisar() {
       txs.sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0, 30).map(function(t) {
         return '<div class="review-item">' +
           '<span class="review-date">' + t.date + '</span>' +
-          '<span class="review-desc">' + trunc(t.description, 50) + '</span>' +
+          '<span class="review-desc">' + t.description + '</span>' +
           '<span class="review-amount ' + (t.type==='gasto'?'amount-negative':'amount-positive') + '">' + (t.type==='gasto'?'-':'') + fmt(t.amount) + '</span>' +
           '<button class="btn-edit-cat" onclick="openCatModal(\'' + t.id + '\')">Editar</button></div>';
       }).join('') + '</div></div>';
   }).join('');
+}
+
+// ---- EDIT / DELETE INDIVIDUAL TRANSACTIONS ----
+async function toggleTxSource(id) {
+  var tx = transactions.find(function(t) { return t.id === id; });
+  if (!tx) return;
+  tx.source = tx.source === 'banco' ? 'tc' : 'banco';
+  await updateTransaction(tx);
+  refreshAll();
+}
+
+async function removeTx(id) {
+  if (!confirm('Eliminar esta transaccion?')) return;
+  await deleteTransaction(id);
+  refreshAll();
 }
 
 // ---- EVENT LISTENERS ----
