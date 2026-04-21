@@ -119,7 +119,7 @@ function renderDashboard() {
   var monthlyData = {};
   transactions.forEach(function(t) {
     if (!monthlyData[t.month]) monthlyData[t.month] = { i: 0, g: 0 };
-    if (t.type === 'ingreso') monthlyData[t.month].i += t.amount;
+    if (t.type === 'ingreso' && !isExcluded(t.category)) monthlyData[t.month].i += t.amount;
     else if (isRealExpense(t)) monthlyData[t.month].g += t.amount;
   });
   var sm = Object.keys(monthlyData).sort();
@@ -151,40 +151,8 @@ function renderDashboard() {
       '<span class="top-amount">-' + fmt(t.amount) + '</span></div>';
   }).join('');
 
-  // Prestamos section
-  var loanCats = [...new Set(transactions.map(function(t) { return t.category; }))].filter(function(c) {
-    return c && c.indexOf('Prestamos') === 0;
-  });
-  var loansContainer = document.getElementById('loansSection');
-  if (!loansContainer) { /* removed section */ }
-  else if (loanCats.length > 0) {
-    loansContainer.innerHTML = loanCats.map(function(cat) {
-      var loanTxs = transactions.filter(function(t) { return t.category === cat; });
-      var cobros = loanTxs.filter(function(t) { return t.type === 'gasto'; });
-      var pagos = loanTxs.filter(function(t) { return t.type === 'ingreso'; });
-      var totalCobros = cobros.reduce(function(s,t) { return s+t.amount; }, 0);
-      var totalPagos = pagos.reduce(function(s,t) { return s+t.amount; }, 0);
-      var diff = totalCobros - totalPagos;
-      var diffClass = diff > 0 ? 'red' : 'green';
-      var loanName = cat.replace('Prestamos ', '').replace('Prestamos', 'Relacionados');
-      var diffLabel = diff > 0 ? loanName + ' te debe' : 'Cuadrado';
-      var allTxs = cobros.concat(pagos).sort(function(a,b) { return b.date.localeCompare(a.date); });
-      return '<div class="chart-card full-width" style="margin-bottom:16px">' +
-        '<h3>' + getCatIcon(cat) + ' ' + cat + ' — Conciliacion</h3>' +
-        '<div style="display:flex;gap:24px;align-items:center;margin-bottom:14px;flex-wrap:wrap">' +
-        '<div><span style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">Banco te cobra</span><br><strong class="amount-negative">' + fmt(totalCobros) + '</strong></div>' +
-        '<div><span style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">' + loanName + ' te paga</span><br><strong class="amount-positive">' + fmt(totalPagos) + '</strong></div>' +
-        '<div><span style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">' + diffLabel + '</span><br><strong class="' + diffClass + '" style="font-size:1.1rem">' + fmt(diff) + '</strong></div></div>' +
-        '<div class="top-gastos">' + allTxs.map(function(t) {
-          return '<div class="top-item"><span class="top-icon">' + (t.type === 'ingreso' ? '\u{1F4E5}' : '\u{1F4E4}') + '</span>' +
-            '<div class="top-info"><span class="top-desc">' + t.description + '</span>' +
-            '<span class="top-date">' + t.date + ' - ' + (t.source === 'banco' ? 'BICE' : 'CMR') + '</span></div>' +
-            '<span class="' + (t.type==='ingreso'?'amount-positive':'amount-negative') + '">' + (t.type==='ingreso'?'+':'-') + fmt(t.amount) + '</span></div>';
-        }).join('') + '</div></div>';
-    }).join('');
-  } else {
-    loansContainer.innerHTML = '';
-  }
+  // Prestamos — Conciliacion (Cleverty y Tricapitals)
+  renderPrestamos();
 
   // ---- SALUD FINANCIERA ----
   var userBench = profile.benchmarks || {};
@@ -576,4 +544,79 @@ function renderInsights() {
         '<div class="insight-item-text">' + ins.text + '</div>' +
       '</div></div>';
   }).join('');
+}
+
+// ---- PRESTAMOS — CONCILIACION ----
+function renderPrestamos() {
+  var container = document.getElementById('prestamosContent');
+  if (!container) return;
+
+  var LOAN_CATS = ['Prestamos Cleverty', 'Prestamos Tricapitals'];
+  var hasAny = false;
+
+  var html = '<div style="display:flex;flex-direction:column;gap:20px">';
+
+  LOAN_CATS.forEach(function(cat) {
+    var txs = transactions.filter(function(t) { return t.category === cat; });
+    if (txs.length === 0) return;
+    hasAny = true;
+
+    var cobros = txs.filter(function(t) { return t.type === 'gasto'; });
+    var pagos = txs.filter(function(t) { return t.type === 'ingreso'; });
+    var totalCobros = cobros.reduce(function(s,t) { return s+t.amount; }, 0);
+    var totalPagos = pagos.reduce(function(s,t) { return s+t.amount; }, 0);
+    var diff = totalCobros - totalPagos;
+    var nombre = cat.replace('Prestamos ', '');
+
+    // Monthly breakdown
+    var byMonth = {};
+    txs.forEach(function(t) {
+      if (!byMonth[t.month]) byMonth[t.month] = { cobros: 0, pagos: 0 };
+      if (t.type === 'gasto') byMonth[t.month].cobros += t.amount;
+      else byMonth[t.month].pagos += t.amount;
+    });
+    var months = Object.keys(byMonth).sort().reverse();
+
+    html += '<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+        '<strong style="font-size:1rem">' + getCatIcon(cat) + ' ' + nombre + '</strong>' +
+        '<span style="font-size:1.1rem;font-weight:700;color:' + (diff > 0 ? 'var(--red)' : 'var(--green)') + '">' +
+          (diff > 0 ? 'Te deben ' + fmt(diff) : diff < 0 ? 'Les debes ' + fmt(Math.abs(diff)) : 'Cuadrado') +
+        '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">' +
+        '<div><span style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">Banco te cobra</span><br><strong class="amount-negative">' + fmt(totalCobros) + '</strong></div>' +
+        '<div><span style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">' + nombre + ' te paga</span><br><strong class="amount-positive">' + fmt(totalPagos) + '</strong></div>' +
+      '</div>';
+
+    // Month by month detail
+    html += '<div style="font-size:0.82rem">';
+    months.forEach(function(m) {
+      var md = byMonth[m];
+      var mDiff = md.cobros - md.pagos;
+      var parts = m.split('-');
+      var monthLabel = MN[parseInt(parts[1])-1] + ' ' + parts[0];
+      html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span>' + monthLabel + '</span>' +
+        '<span style="display:flex;gap:16px">' +
+          (md.cobros > 0 ? '<span class="amount-negative">-' + fmt(md.cobros) + '</span>' : '<span style="color:var(--text-secondary)">-</span>') +
+          (md.pagos > 0 ? '<span class="amount-positive">+' + fmt(md.pagos) + '</span>' : '<span style="color:var(--text-secondary)">-</span>') +
+          '<span style="font-weight:600;min-width:100px;text-align:right;color:' + (mDiff > 0 ? 'var(--red)' : 'var(--green)') + '">' +
+            (mDiff > 0 ? 'Deben ' + fmt(mDiff) : mDiff < 0 ? 'A favor ' + fmt(Math.abs(mDiff)) : 'OK') +
+          '</span>' +
+        '</span>' +
+      '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+
+  if (!hasAny) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary)">' +
+      '<p>No hay transacciones categorizadas como "Prestamos Cleverty" o "Prestamos Tricapitals".</p>' +
+      '<p style="font-size:0.8rem">Categoriza tus transacciones de prestamos para ver la conciliacion aqui.</p></div>';
+  } else {
+    container.innerHTML = html;
+  }
 }

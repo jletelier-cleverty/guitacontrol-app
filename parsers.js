@@ -969,6 +969,10 @@ function detectBankExcel(workbook) {
 
   // Tarjetas de credito (detectar primero para no confundir con bancos)
   if (headerText.indexOf('cmr') >= 0 || (headerText.indexOf('falabella') >= 0 && text.indexOf('valor cuota') >= 0)) return 'cmr';
+  // CMR sin marca: tiene TITULAR/ADICIONAL + VALOR CUOTA (formato único de CMR Falabella)
+  if (headerText.indexOf('titular/adicional') >= 0 && headerText.indexOf('valor cuota') >= 0) return 'cmr';
+  // CMR por nombre de hoja
+  if (sheetName.indexOf('movimientos facturados') >= 0 || sheetName.indexOf('ultimos movimientos') >= 0) return 'cmr';
   if (sheetName.indexOf('saldo y mov no facturado') >= 0 || headerText.indexOf('mov no facturado') >= 0 ||
       headerText.indexOf('tipo de tarjeta') >= 0 || headerText.indexOf('visa signature') >= 0 ||
       headerText.indexOf('visa platinum') >= 0 || headerText.indexOf('mastercard') >= 0) return 'visa';
