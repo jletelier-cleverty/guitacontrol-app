@@ -36,13 +36,17 @@ function isVisible(tx) {
 function isDuplicate(t) {
   return transactions.some(function(x) {
     if (x.date !== t.date || x.amount !== t.amount || x.type !== t.type) return false;
-    // Same date + same amount + same type = duplicate
-    // Compare first 20 chars of normalized description to allow minor variations
-    var nd = t.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
-    var xd = x.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+    // Compare normalized full description (not truncated) to catch minor spacing variations
+    var nd = t.description.toLowerCase().replace(/[^a-z0-9]/g, '');
+    var xd = x.description.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (nd === xd) return true;
-    // Same source + same date + same amount = very likely duplicate
-    if (x.source === t.source) return true;
+    // Fuzzy: same source + significant words match
+    if (x.source === t.source) {
+      var nWords = t.description.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 3; });
+      var xWords = x.description.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 3; });
+      var shared = nWords.filter(function(w) { return xWords.indexOf(w) >= 0; });
+      if (nWords.length > 0 && shared.length >= Math.max(2, nWords.length * 0.6)) return true;
+    }
     return false;
   });
 }
