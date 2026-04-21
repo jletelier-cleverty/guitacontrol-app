@@ -413,19 +413,6 @@ dropEl.addEventListener('drop', function(e) {
   if (e.dataTransfer.files.length > 0) importFiles(e.dataTransfer.files);
 });
 
-document.getElementById('dedupBtn').addEventListener('click', async function() {
-  var removed = await removeDuplicates();
-  var info = document.getElementById('storageInfo');
-  if (removed > 0) {
-    info.innerHTML = '<strong>' + removed + ' duplicados eliminados.</strong> Quedan ' + transactions.length + ' transacciones.';
-    info.className = 'import-status success';
-    refreshAll();
-  } else {
-    info.textContent = 'No se encontraron duplicados.';
-    info.className = 'import-status success';
-  }
-});
-
 document.getElementById('exportBtn').addEventListener('click', function() {
   var csv = ['Fecha,Descripcion,Monto,Tipo,Fuente,Categoria'];
   transactions.forEach(function(t) { csv.push(t.date + ',"' + t.description.replace(/"/g,'""') + '",' + t.amount + ',' + t.type + ',' + t.source + ',"' + t.category + '"'); });
