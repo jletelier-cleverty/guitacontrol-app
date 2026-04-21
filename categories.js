@@ -433,6 +433,19 @@ document.getElementById('exportBtn').addEventListener('click', function() {
   a.download = 'finanzas_export.csv'; a.click();
 });
 
+document.getElementById('dedupeBtn').addEventListener('click', async function() {
+  var removed = await removeDuplicates();
+  var info = document.getElementById('storageInfo');
+  if (removed > 0) {
+    info.textContent = removed + ' duplicados eliminados.';
+    info.className = 'import-status success';
+    refreshAll();
+  } else {
+    info.textContent = 'No se encontraron duplicados.';
+    info.className = 'import-status success';
+  }
+});
+
 document.getElementById('clearBtn').addEventListener('click', async function() {
   if (confirm('Borrar todas las transacciones?')) { await deleteAllTransactions(); refreshAll(); }
 });

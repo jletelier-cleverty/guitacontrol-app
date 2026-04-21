@@ -764,7 +764,9 @@ async function removeDuplicates() {
   var seen = {};
   var clean = [];
   transactions.forEach(function(tx) {
-    var key = tx.date + '|' + tx.amount + '|' + normalizeDesc(tx.description);
+    // Same date + amount + type + first 20 chars normalized = duplicate
+    var nd = tx.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+    var key = tx.date + '|' + tx.amount + '|' + tx.type + '|' + nd;
     if (!seen[key]) {
       seen[key] = true;
       clean.push(tx);

@@ -34,19 +34,15 @@ function isVisible(tx) {
 }
 
 function isDuplicate(t) {
-  var nd = t.description.toLowerCase().replace(/[^a-z0-9]/g, '');
-  var nWords = t.description.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 3; });
   return transactions.some(function(x) {
-    if (x.date !== t.date || x.amount !== t.amount) return false;
-    // Exact match on normalized description
-    var xd = x.description.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (xd === nd) return true;
-    // Fuzzy match: same date+amount+source and share significant words
-    if (x.source === t.source && nWords.length > 0) {
-      var xWords = x.description.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 3; });
-      var shared = nWords.filter(function(w) { return xWords.indexOf(w) >= 0; });
-      if (shared.length >= 2 || (shared.length >= 1 && nWords.length <= 2)) return true;
-    }
+    if (x.date !== t.date || x.amount !== t.amount || x.type !== t.type) return false;
+    // Same date + same amount + same type = duplicate
+    // Compare first 20 chars of normalized description to allow minor variations
+    var nd = t.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+    var xd = x.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+    if (nd === xd) return true;
+    // Same source + same date + same amount = very likely duplicate
+    if (x.source === t.source) return true;
     return false;
   });
 }
